@@ -1,10 +1,12 @@
-.site-footer { flex: 0 0 auto; }
-
-.site-footer__main {
-  padding: 52px max(32px, calc((100% - 1300px) / 2));
-  display: grid;
-  grid-template-columns: 1fr 3fr;
-  gap: 72px;
+.site-footer {
+  flex: 0 0 auto;
+  min-height: 72px;
+  padding: 14px max(32px, calc((100% - 1300px) / 2));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-top: 1px solid #d8d3d0;
   background: var(--footer);
 }
 
@@ -16,66 +18,28 @@
   gap: 12px;
   color: var(--orange);
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 29px;
-  letter-spacing: -1.5px;
+  font-size: 22px;
+  letter-spacing: -1px;
   line-height: 1;
   text-decoration: none;
   white-space: nowrap;
 }
 
 .site-footer__logo {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   flex: 0 0 auto;
   display: block;
 }
 
-.site-footer__links {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 40px;
-}
-
-.site-footer__links h2 {
-  margin: 0 0 16px;
-  color: var(--ink);
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.site-footer__links a {
-  margin: 0 0 11px;
-  display: block;
-  color: var(--ink);
-  font-size: 13px;
-  text-decoration: none;
-}
-
-.site-footer__links a:hover { text-decoration: underline; text-underline-offset: 3px; }
-
-.site-footer__legal {
-  min-height: 64px;
-  padding: 18px max(32px, calc((100% - 1300px) / 2));
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  border-top: 1px solid #d8d3d0;
+.site-footer__copyright {
   color: var(--muted);
-  background: var(--footer);
   font-size: 11px;
-}
-
-.site-footer__legal div { display: flex; gap: 18px; }
-.site-footer__legal a { color: var(--ink); }
-
-@media (max-width: 740px) {
-  .site-footer__main { grid-template-columns: 1fr; gap: 36px; padding: 42px 28px; }
-  .site-footer__links { gap: 20px; }
+  white-space: nowrap;
 }
 
 @media (max-width: 480px) {
-  .site-footer__links { grid-template-columns: 1fr 1fr; }
-  .site-footer__links > div:last-child { grid-column: 1 / -1; }
-  .site-footer__legal { align-items: flex-start; flex-direction: column; padding: 22px 24px; }
+  .site-footer {
+    padding: 14px 24px;
+  }
 }
