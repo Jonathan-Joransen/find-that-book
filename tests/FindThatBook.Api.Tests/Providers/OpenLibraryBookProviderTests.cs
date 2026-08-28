@@ -1,6 +1,10 @@
 using System.Net;
 using System.Text;
+using FindThatBook.Api.Extensions;
+using FindThatBook.Api.Providers;
 using FindThatBook.Api.Providers.OpenLibrary;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -82,6 +86,54 @@ public sealed class OpenLibraryBookProviderTests
         await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync("moby dick"));
     }
 
+    [Fact]
+    public async Task SearchAsync_RetriesTransientFailureAndReturnsRecoveredResponse()
+    {
+        const string json = """
+            {
+              "docs": [
+                {
+                  "title": "Recovered book"
+                }
+              ]
+            }
+            """;
+        var handler = new SequenceHttpMessageHandler(
+            (HttpStatusCode.ServiceUnavailable, "{}"),
+            (HttpStatusCode.OK, json));
+        await using var serviceProvider = CreateServiceProvider(handler);
+        var provider = serviceProvider.GetRequiredService<IBookProvider>();
+
+        var books = await provider.SearchAsync("recovered");
+
+        Assert.Equal(2, handler.RequestCount);
+        Assert.Equal("Recovered book", Assert.Single(books).Title);
+    }
+
+    [Fact]
+    public async Task SearchAsync_DoesNotRetryPermanentFailure()
+    {
+        var handler = new StubHttpMessageHandler(HttpStatusCode.BadRequest, "{}");
+        await using var serviceProvider = CreateServiceProvider(handler);
+        var provider = serviceProvider.GetRequiredService<IBookProvider>();
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync("bad request"));
+
+        Assert.Equal(1, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task SearchAsync_StopsAfterConfiguredRetryCount()
+    {
+        var handler = new StubHttpMessageHandler(HttpStatusCode.ServiceUnavailable, "{}");
+        await using var serviceProvider = CreateServiceProvider(handler);
+        var provider = serviceProvider.GetRequiredService<IBookProvider>();
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync("unavailable"));
+
+        Assert.Equal(3, handler.RequestCount);
+    }
+
     private static OpenLibraryBookProvider CreateProvider(
         HttpMessageHandler handler,
         int searchLimit = 12)
@@ -95,21 +147,72 @@ public sealed class OpenLibraryBookProviderTests
         return new OpenLibraryBookProvider(client, options);
     }
 
+    private static ServiceProvider CreateServiceProvider(HttpMessageHandler handler)
+    {
+        var settings = new Dictionary<string, string?>
+        {
+            [$"{OpenLibraryOptions.SectionName}:BaseUrl"] = "https://openlibrary.org/",
+            [$"{OpenLibraryOptions.SectionName}:SearchLimit"] = "12",
+            [$"{OpenLibraryOptions.SectionName}:RetryCount"] = "2",
+            [$"{OpenLibraryOptions.SectionName}:RetryDelayMilliseconds"] = "0",
+            [$"{OpenLibraryOptions.SectionName}:UserAgent"] = "FindThatBook.Tests/1.0"
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(settings)
+            .Build();
+        var services = new ServiceCollection();
+
+        services.AddLogging();
+        services.AddOpenLibrary(configuration);
+        services
+            .AddHttpClient<IBookProvider, OpenLibraryBookProvider>()
+            .ConfigurePrimaryHttpMessageHandler(() => handler);
+
+        return services.BuildServiceProvider();
+    }
+
     private sealed class StubHttpMessageHandler(
         HttpStatusCode statusCode,
         string responseBody) : HttpMessageHandler
     {
         public HttpRequestMessage? Request { get; private set; }
 
+        public int RequestCount { get; private set; }
+
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
             Request = request;
+            RequestCount++;
 
             return Task.FromResult(new HttpResponseMessage(statusCode)
             {
                 Content = new StringContent(responseBody, Encoding.UTF8, "application/json")
+            });
+        }
+    }
+
+    private sealed class SequenceHttpMessageHandler(
+        params (HttpStatusCode StatusCode, string ResponseBody)[] responses)
+        : HttpMessageHandler
+    {
+        public int RequestCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            var index = Math.Min(RequestCount, responses.Length - 1);
+            var response = responses[index];
+            RequestCount++;
+
+            return Task.FromResult(new HttpResponseMessage(response.StatusCode)
+            {
+                Content = new StringContent(
+                    response.ResponseBody,
+                    Encoding.UTF8,
+                    "application/json")
             });
         }
     }

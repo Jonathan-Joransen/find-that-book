@@ -54,6 +54,9 @@ Open Library's response models remain internal to the provider.
 
 Open Library settings are under `OpenLibrary` in
 `src/FindThatBook.Api/appsettings.json`.
+The Microsoft HTTP resilience pipeline retries transient timeouts, rate limits,
+and server errors with exponential backoff and jitter according to `RetryCount`
+and `RetryDelayMilliseconds`.
 Before deploying an instance that sends regular traffic, update `UserAgent` to
 include a contact email, as requested by Open Library's API usage guidelines.
 
