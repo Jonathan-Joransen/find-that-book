@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -20,14 +20,17 @@ public sealed class OpenLibraryBookProvider : IBookProvider
     };
 
     private readonly HttpClient _httpClient;
+    private readonly ILogger<OpenLibraryBookProvider> _logger;
     private readonly OpenLibraryOptions _options;
 
     public OpenLibraryBookProvider(
         HttpClient httpClient,
-        IOptions<OpenLibraryOptions> options)
+        IOptions<OpenLibraryOptions> options,
+        ILogger<OpenLibraryBookProvider> logger)
     {
         _httpClient = httpClient;
         _options = options.Value;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<Book>> SearchAsync(
@@ -57,9 +60,20 @@ public sealed class OpenLibraryBookProvider : IBookProvider
         searchParameters.Add($"limit={_options.SearchLimit}");
         var requestUri = $"search.json?{string.Join('&', searchParameters)}";
 
+        _logger.LogInformation("Sending Open Library request to {RequestUri}.", requestUri);
+
+        var startedAt = Stopwatch.GetTimestamp();
         using var response = await _httpClient.GetAsync(requestUri, cancellationToken);
+        var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Open Library returned HTTP {StatusCode} in {ElapsedMilliseconds} ms: {Response}",
+            (int)response.StatusCode,
+            Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds,
+            responseBody);
+
         response.EnsureSuccessStatusCode();
-        return await ReadBooksAsync(response, search, cancellationToken);
+        return ReadBooks(responseBody, search);
     }
 
     private static void AddSearchParameter(
@@ -73,17 +87,15 @@ public sealed class OpenLibraryBookProvider : IBookProvider
         }
     }
 
-    private async Task<IReadOnlyList<Book>> ReadBooksAsync(
-        HttpResponseMessage response,
-        BookSearchCompletion search,
-        CancellationToken cancellationToken)
+    private IReadOnlyList<Book> ReadBooks(
+        string responseBody,
+        BookSearchCompletion search)
     {
         OpenLibrarySearchResponse? searchResponse;
 
         try
         {
-            searchResponse = await response.Content.ReadFromJsonAsync<OpenLibrarySearchResponse>(
-                cancellationToken: cancellationToken);
+            searchResponse = JsonSerializer.Deserialize<OpenLibrarySearchResponse>(responseBody);
         }
         catch (JsonException exception)
         {

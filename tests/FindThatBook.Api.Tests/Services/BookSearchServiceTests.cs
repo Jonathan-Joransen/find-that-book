@@ -3,6 +3,7 @@ using FindThatBook.Api.Models.LanguageModels;
 using FindThatBook.Api.Prompts;
 using FindThatBook.Api.Providers;
 using FindThatBook.Api.Services;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -100,13 +101,38 @@ public sealed class BookSearchServiceTests
         Assert.Equal([new PromptId("book-search", 3)], languageModel.PromptIds);
     }
 
+    [Fact]
+    public async Task SearchAsync_LogsEachSearchStepAtInformationLevel()
+    {
+        var provider = new RecordingBookProvider(CreateBook("Moby Dick"));
+        var languageModel = new StubLanguageModelProvider(
+            new BookSearchCompletion("Moby Dick", "Herman Melville", "whaling voyage"),
+            new BookRankingCompletion(
+            [
+                new RankedBook(95, "The title and author match.", provider.Results[0])
+            ]));
+        var logger = new RecordingLogger<BookSearchService>();
+        var service = CreateService(provider, languageModel, logger);
+
+        await service.SearchAsync("a whale and an obsessive captain");
+
+        Assert.All(logger.Entries, entry => Assert.Equal(LogLevel.Information, entry.Level));
+        Assert.Contains(logger.Entries, entry => entry.Message.StartsWith("Step 1:"));
+        Assert.Contains(logger.Entries, entry => entry.Message.StartsWith("Step 1 complete."));
+        Assert.Contains(logger.Entries, entry => entry.Message.StartsWith("Step 2:"));
+        Assert.Contains(logger.Entries, entry => entry.Message.StartsWith("Step 2 complete."));
+        Assert.Contains(logger.Entries, entry => entry.Message.StartsWith("Step 3:"));
+        Assert.Contains(logger.Entries, entry => entry.Message.StartsWith("Step 3 complete."));
+    }
+
     private static BookSearchService CreateService(
         IBookProvider books,
-        ILanguageModelProvider languageModel) =>
+        ILanguageModelProvider languageModel,
+        ILogger<BookSearchService>? logger = null) =>
         new(
             books,
             languageModel,
-            NullLogger<BookSearchService>.Instance);
+            logger ?? NullLogger<BookSearchService>.Instance);
 
     private static Book CreateBook(string title) =>
         new(

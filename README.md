@@ -64,6 +64,11 @@ and `RetryDelayMilliseconds`.
 Before deploying an instance that sends regular traffic, update `UserAgent` to
 include a contact email, as requested by Open Library's API usage guidelines.
 
+When the API runs in the `Development` environment, information-level console logs
+show each search step, the typed Gemini responses, and the raw Open Library response.
+The base configuration used by production and other environments raises the default
+minimum level to `Warning`, so response bodies and normal search details are not logged.
+
 ## Gemini query refinement
 
 `BookSearchService` sends a typed `BookSearchPrompt` to Gemini for every search. The resulting

@@ -6,6 +6,8 @@ using FindThatBook.Api.Providers;
 using FindThatBook.Api.Providers.OpenLibrary;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -55,6 +57,41 @@ public sealed class OpenLibraryBookProviderTests
         Assert.Equal(
             "?title=Moby%20Dick&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=5",
             handler.Request?.RequestUri?.Query);
+    }
+
+    [Fact]
+    public async Task SearchAsync_LogsRequestAndRawResponseAtInformationLevel()
+    {
+        const string json = """
+            {
+              "docs": [
+                {
+                  "title": "Moby Dick"
+                }
+              ]
+            }
+            """;
+        var logger = new RecordingLogger<OpenLibraryBookProvider>();
+        var provider = CreateProvider(
+            new StubHttpMessageHandler(HttpStatusCode.OK, json),
+            logger: logger);
+
+        await provider.SearchAsync(new BookSearchCompletion("Moby Dick", null, null));
+
+        Assert.Collection(
+            logger.Entries,
+            entry =>
+            {
+                Assert.Equal(LogLevel.Information, entry.Level);
+                Assert.Contains("Sending Open Library request", entry.Message);
+                Assert.Contains("title=Moby%20Dick", entry.Message);
+            },
+            entry =>
+            {
+                Assert.Equal(LogLevel.Information, entry.Level);
+                Assert.Contains("Open Library returned HTTP 200", entry.Message);
+                Assert.Contains("\"title\": \"Moby Dick\"", entry.Message);
+            });
     }
 
     [Fact]
@@ -207,7 +244,8 @@ public sealed class OpenLibraryBookProviderTests
 
     private static OpenLibraryBookProvider CreateProvider(
         HttpMessageHandler handler,
-        int searchLimit = 25)
+        int searchLimit = 25,
+        ILogger<OpenLibraryBookProvider>? logger = null)
     {
         var client = new HttpClient(handler)
         {
@@ -218,7 +256,10 @@ public sealed class OpenLibraryBookProviderTests
             SearchLimit = searchLimit
         });
 
-        return new OpenLibraryBookProvider(client, options);
+        return new OpenLibraryBookProvider(
+            client,
+            options,
+            logger ?? NullLogger<OpenLibraryBookProvider>.Instance);
     }
 
     private static ServiceProvider CreateServiceProvider(HttpMessageHandler handler)

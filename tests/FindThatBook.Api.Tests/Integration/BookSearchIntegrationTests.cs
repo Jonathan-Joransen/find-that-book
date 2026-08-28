@@ -1,6 +1,7 @@
 using FindThatBook.Api.Models.LanguageModels;
 using FindThatBook.Api.Prompts;
 using FindThatBook.Api.Providers.Gemini;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
 using Xunit.Abstractions;
@@ -41,5 +42,7 @@ public sealed class BookSearchIntegrationTests(ITestOutputHelper output)
     }
 
     private static GeminiLanguageModelProvider CreateLanguageModel()
-        => new(Options.Create(GeminiIntegrationTestConfiguration.GetOptions()));
+        => new(
+            Options.Create(GeminiIntegrationTestConfiguration.GetOptions()),
+            NullLogger<GeminiLanguageModelProvider>.Instance);
 }
