@@ -26,7 +26,8 @@ public sealed class OpenLibraryBookProviderTests
                   "title": "Moby Dick",
                   "author_name": ["Herman Melville"],
                   "first_publish_year": 1851,
-                  "first_sentence": ["Call me Ishmael."]
+                  "first_sentence": ["Call me Ishmael."],
+                  "cover_i": 10521270
                 }
               ]
             }
@@ -39,11 +40,18 @@ public sealed class OpenLibraryBookProviderTests
         var book = Assert.Single(books);
         Assert.Equal("Moby Dick", book.Title);
         Assert.Equal("Herman Melville", book.Author);
-        Assert.Equal(1851, book.PublishedYear);
+        Assert.Equal(1851, book.FirstPublishYear);
         Assert.Equal("Call me Ishmael.", book.Description);
+        Assert.Equal("/works/OL102749W", book.OpenLibraryKey);
+        Assert.Equal("https://openlibrary.org/works/OL102749W", book.OpenLibraryUrl);
+        Assert.Equal(10521270, book.CoverId);
+        Assert.Equal(
+            "https://covers.openlibrary.org/b/id/10521270-M.jpg",
+            book.CoverImageUrl);
+        Assert.Equal("Strong title match.", book.Explanation);
         Assert.Equal(HttpMethod.Get, handler.Request?.Method);
         Assert.Equal(
-            "?q=moby%20dick&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence&limit=5",
+            "?q=moby%20dick&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=5",
             handler.Request?.RequestUri?.Query);
     }
 
@@ -65,8 +73,37 @@ public sealed class OpenLibraryBookProviderTests
 
         var book = Assert.Single(books);
         Assert.Equal("Unknown author", book.Author);
-        Assert.Equal(0, book.PublishedYear);
+        Assert.Null(book.FirstPublishYear);
         Assert.Equal("No description is available from Open Library.", book.Description);
+        Assert.Null(book.OpenLibraryKey);
+        Assert.Null(book.OpenLibraryUrl);
+        Assert.Null(book.CoverId);
+        Assert.Null(book.CoverImageUrl);
+        Assert.Equal("The title shares distinctive terms with the query.", book.Explanation);
+    }
+
+    [Fact]
+    public async Task SearchAsync_ExplainsCombinedTitleAndAuthorMatch()
+    {
+        const string json = """
+            {
+              "docs": [
+                {
+                  "key": "OL262758W",
+                  "title": "The Hobbit",
+                  "author_name": ["J. R. R. Tolkien"],
+                  "first_publish_year": 1937
+                }
+              ]
+            }
+            """;
+        var provider = CreateProvider(new StubHttpMessageHandler(HttpStatusCode.OK, json));
+
+        var books = await provider.SearchAsync("The Hobbit J.R.R. Tolkien");
+
+        var book = Assert.Single(books);
+        Assert.Equal("/works/OL262758W", book.OpenLibraryKey);
+        Assert.Equal("Strong title and primary-author match.", book.Explanation);
     }
 
     [Fact]

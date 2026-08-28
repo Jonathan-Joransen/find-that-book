@@ -1,5 +1,7 @@
 .book-card { position: relative; min-width: 0; }
 
+.book-card__cover-link { display: block; color: inherit; text-decoration: none; }
+
 .book-card__cover {
   position: relative;
   aspect-ratio: 4 / 5;
@@ -9,6 +11,15 @@
   overflow: hidden;
   border-radius: 10px;
   color: #ffffff;
+  box-shadow: 0 2px 5px rgba(34, 34, 34, 0.16);
+}
+
+.book-card__cover-image {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  display: block;
+  border-radius: 10px;
+  object-fit: cover;
   box-shadow: 0 2px 5px rgba(34, 34, 34, 0.16);
 }
 
@@ -96,6 +107,9 @@
   white-space: nowrap;
 }
 
+.book-card__details h3 a { color: inherit; text-decoration: none; }
+.book-card__details h3 a:hover { text-decoration: underline; }
+
 .book-card__byline { margin: 0 0 7px; color: var(--muted); font-size: 12px; }
 
 .book-card__description {
@@ -110,6 +124,22 @@
 }
 
 .book-card__year { margin: 0; color: var(--ink); font-size: 12px; font-weight: 600; }
+
+.book-card__identifier {
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.book-card__explanation {
+  margin: 9px 0 0;
+  color: #3e3e3e;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.book-card__explanation strong { color: var(--ink); }
 
 @media (max-width: 740px) {
   .book-card__favorite { opacity: 1; transform: none; }

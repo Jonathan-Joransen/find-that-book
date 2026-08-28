@@ -1,6 +1,11 @@
 export type Book = {
   title: string
   author: string
-  publishedYear: number
+  firstPublishYear: number | null
   description: string
+  openLibraryKey: string | null
+  openLibraryUrl: string | null
+  coverId: number | null
+  coverImageUrl: string | null
+  explanation: string
 }

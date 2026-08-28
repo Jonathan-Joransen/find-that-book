@@ -49,8 +49,11 @@ Open `http://localhost:5173`. Vite proxies `POST /book/search` to the API at
 ```
 
 The endpoint validates the query and searches Open Library through an
-`IBookProvider` implementation. Results preserve the frontend contract while
-Open Library's response models remain internal to the provider.
+`IBookProvider` implementation. Each result includes its title, author names,
+first publication year when known, Open Library work key and link, a cover URL
+when available, and a concise explanation of the match. Open Library's response
+models remain internal to the provider, and its default relevance ordering is
+preserved.
 
 Open Library settings are under `OpenLibrary` in
 `src/FindThatBook.Api/appsettings.json`.

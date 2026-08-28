@@ -5,8 +5,8 @@ import './SearchResults.css'
 
 const coverThemes = ['coral', 'blue', 'ochre', 'sage', 'plum', 'clay']
 
-function getBookKey(title: string, author: string) {
-  return `${title}-${author}`
+function getBookKey(openLibraryKey: string | null, title: string, author: string) {
+  return openLibraryKey ?? `${title}-${author}`
 }
 
 export function SearchResults({ books, query, isLoading }: SearchResultsProps) {
@@ -34,7 +34,7 @@ export function SearchResults({ books, query, isLoading }: SearchResultsProps) {
       {books.length > 0 ? (
         <div className="search-results__grid">
           {books.map((book, index) => {
-            const bookKey = getBookKey(book.title, book.author)
+            const bookKey = getBookKey(book.openLibraryKey, book.title, book.author)
             return (
               <BookCard
                 key={`${bookKey}-${index}`}
