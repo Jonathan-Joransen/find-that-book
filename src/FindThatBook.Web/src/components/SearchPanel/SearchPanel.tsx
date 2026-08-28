@@ -1,4 +1,4 @@
-import { type FormEvent, type KeyboardEvent } from 'react'
+import { type FormEvent, type KeyboardEvent, useLayoutEffect, useRef } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowUp, faCircleNotch } from '@fortawesome/free-solid-svg-icons'
 import type { SearchPanelProps } from './SearchPanel.models'
@@ -18,6 +18,38 @@ export function SearchPanel({
   onQueryChange,
   onSearch,
 }: SearchPanelProps) {
+  const formRef = useRef<HTMLFormElement>(null)
+  const previousFormTop = useRef<number | null>(null)
+
+  useLayoutEffect(() => {
+    const form = formRef.current
+    if (!form) return
+
+    const currentTop = form.getBoundingClientRect().top
+    const previousTop = previousFormTop.current
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    if (hasSearched && previousTop !== null && !prefersReducedMotion) {
+      const offset = previousTop - currentTop
+
+      if (Math.abs(offset) > 1) {
+        form.animate(
+          [
+            { transform: `translateY(${offset}px)` },
+            { transform: 'translateY(0)' },
+          ],
+          {
+            duration: 780,
+            easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+          },
+        )
+      }
+    }
+
+    previousFormTop.current = currentTop
+  }, [hasSearched])
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     void onSearch(query)
@@ -36,13 +68,21 @@ export function SearchPanel({
       aria-labelledby="page-title"
     >
       <div className="search-panel__copy">
-        <h1 id="page-title">
-          {hasSearched ? 'Find another good book' : 'What was that book?'}
+        <h1
+          id="page-title"
+          aria-label={hasSearched ? 'Find another book' : 'What was that book?'}
+          aria-live="polite"
+        >
+          <span className="search-panel__title-initial" aria-hidden="true">
+            What was that book?
+          </span>
+          <span className="search-panel__title-results" aria-hidden="true">
+            Find another book
+          </span>
         </h1>
-        {!hasSearched && <p>Share whatever you remember.</p>}
       </div>
 
-      <form className="search-panel__form" onSubmit={handleSubmit}>
+      <form ref={formRef} className="search-panel__form" onSubmit={handleSubmit}>
         <label className="sr-only" htmlFor="book-query">
           Describe the book you are looking for
         </label>

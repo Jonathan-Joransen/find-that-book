@@ -19,6 +19,7 @@
 html {
   min-width: 320px;
   scroll-behavior: smooth;
+  overflow-anchor: none;
 }
 
 body {

@@ -19,6 +19,7 @@ export function HomePage() {
 
       {search.hasSearched && (
         <SearchResults
+          key={search.resultQuery}
           books={search.books}
           query={search.resultQuery}
           isLoading={search.isLoading}
