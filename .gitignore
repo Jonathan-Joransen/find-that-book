@@ -1,0 +1,13 @@
+# .NET
+**/bin/
+**/obj/
+
+# Frontend
+src/FindThatBook.Web/node_modules/
+src/FindThatBook.Web/dist/
+src/FindThatBook.Web/.env.local
+
+# IDE and OS
+.DS_Store
+.idea/
+.vscode/
