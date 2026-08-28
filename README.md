@@ -62,18 +62,16 @@ include a contact email, as requested by Open Library's API usage guidelines.
 
 ## Gemini query refinement
 
-Language-model query refinement is disabled by default, so local search works
-without an API key. When enabled, `BookSearchService` sends a typed
-`BookSearchPrompt` to Gemini. The resulting
+`BookSearchService` sends a typed `BookSearchPrompt` to Gemini for every search. The resulting
 structured query is validated and then sent to Open Library for book metadata.
-
-Enable Gemini:
+Configure the Gemini API key before starting the API:
 
 ```bash
-export LanguageModel__Enabled=true
 export GEMINI_API_KEY=your-key
 ```
 
+The language-model provider is selected in
+`LanguageModelServiceCollectionExtensions`; changing providers is a code change.
 The model name can be overridden with `Gemini__Model`. API keys should be
 supplied through environment variables or a local secret store and should never
 be committed.

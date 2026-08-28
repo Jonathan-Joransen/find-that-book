@@ -9,10 +9,6 @@ public static class LanguageModelServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddOptions<LanguageModelOptions>()
-            .Bind(configuration.GetSection(LanguageModelOptions.SectionName))
-            .ValidateOnStart();
-
         services.AddOptions<GeminiOptions>()
             .Bind(configuration.GetSection(GeminiOptions.SectionName))
             .Validate(

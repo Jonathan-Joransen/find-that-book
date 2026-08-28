@@ -4,7 +4,6 @@ using FindThatBook.Api.Prompts;
 using FindThatBook.Api.Providers;
 using FindThatBook.Api.Services;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace FindThatBook.Api.Tests.Services;
@@ -12,26 +11,12 @@ namespace FindThatBook.Api.Tests.Services;
 public sealed class BookSearchServiceTests
 {
     [Fact]
-    public async Task SearchAsync_UsesOriginalQueryWhenLanguageModelIsDisabled()
-    {
-        var books = new RecordingBookProvider();
-        var languageModel = new StubLanguageModelProvider(
-            new BookSearchCompletion("refined query"));
-        var service = CreateService(books, languageModel, enabled: false);
-
-        await service.SearchAsync("  original query  ");
-
-        Assert.Equal("original query", books.Query);
-        Assert.False(languageModel.WasCalled);
-    }
-
-    [Fact]
-    public async Task SearchAsync_UsesLanguageModelQueryWhenEnabled()
+    public async Task SearchAsync_UsesLanguageModelQuery()
     {
         var books = new RecordingBookProvider();
         var languageModel = new StubLanguageModelProvider(
             new BookSearchCompletion("Moby Dick Herman Melville"));
-        var service = CreateService(books, languageModel, enabled: true);
+        var service = CreateService(books, languageModel);
 
         await service.SearchAsync("a whale and an obsessive captain");
 
@@ -40,17 +25,24 @@ public sealed class BookSearchServiceTests
         Assert.Equal(new PromptId("book-search", 1), languageModel.PromptId);
     }
 
+    [Fact]
+    public async Task SearchAsync_DoesNotSearchBooksWhenLanguageModelFails()
+    {
+        var books = new RecordingBookProvider();
+        var service = CreateService(books, new ThrowingLanguageModelProvider());
+
+        await Assert.ThrowsAsync<LanguageModelException>(
+            () => service.SearchAsync("  original query  "));
+
+        Assert.Null(books.Query);
+    }
+
     private static BookSearchService CreateService(
         IBookProvider books,
-        ILanguageModelProvider languageModel,
-        bool enabled) =>
+        ILanguageModelProvider languageModel) =>
         new(
             books,
             languageModel,
-            Options.Create(new LanguageModelOptions
-            {
-                Enabled = enabled
-            }),
             NullLogger<BookSearchService>.Instance);
 
     private sealed class RecordingBookProvider : IBookProvider
@@ -81,5 +73,15 @@ public sealed class BookSearchServiceTests
             PromptId = prompt.Id;
             return Task.FromResult((TResponse)response);
         }
+    }
+
+    private sealed class ThrowingLanguageModelProvider : ILanguageModelProvider
+    {
+        public Task<TResponse> GenerateAsync<TResponse>(
+            ILanguageModelPrompt<TResponse> prompt,
+            CancellationToken cancellationToken = default) =>
+            throw new LanguageModelException(
+                "Language model unavailable.",
+                new HttpRequestException("Provider request failed."));
     }
 }
