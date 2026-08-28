@@ -39,7 +39,12 @@ public sealed class OpenLibraryBookProvider : IBookProvider
         var searchParameters = new List<string>();
         AddSearchParameter(searchParameters, "title", search.Title);
         AddSearchParameter(searchParameters, "author", search.Author);
-        AddSearchParameter(searchParameters, "q", search.Keywords);
+
+        if (string.IsNullOrWhiteSpace(search.Title) &&
+            string.IsNullOrWhiteSpace(search.Author))
+        {
+            AddSearchParameter(searchParameters, "q", search.Keywords);
+        }
 
         if (searchParameters.Count == 0)
         {

@@ -6,7 +6,7 @@ public sealed class OpenLibraryOptions
 
     public string BaseUrl { get; init; } = "https://openlibrary.org/";
 
-    public int SearchLimit { get; init; } = 12;
+    public int SearchLimit { get; init; } = 25;
 
     public int RetryCount { get; init; } = 2;
 

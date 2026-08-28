@@ -85,7 +85,7 @@ public sealed class OpenLibraryBookProviderTests
         Assert.Null(book.CoverImageUrl);
         Assert.Equal("The title shares distinctive terms with the query.", book.Explanation);
         Assert.Equal(
-            "?q=anonymous&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=12",
+            "?q=anonymous&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=25",
             handler.Request?.RequestUri?.Query);
     }
 
@@ -114,8 +114,25 @@ public sealed class OpenLibraryBookProviderTests
         Assert.Equal("/works/OL262758W", book.BookKey);
         Assert.Equal("Strong title and primary-author match.", book.Explanation);
         Assert.Equal(
-            "?title=The%20Hobbit&author=J.R.R.%20Tolkien&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=12",
+            "?title=The%20Hobbit&author=J.R.R.%20Tolkien&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=25",
             handler.Request?.RequestUri?.Query);
+    }
+
+    [Theory]
+    [InlineData("Frankenstein", "Mary Shelley")]
+    [InlineData("Frankenstein", null)]
+    [InlineData(null, "Mary Shelley")]
+    public async Task SearchAsync_DoesNotAddKeywordsWhenTitleOrAuthorIsAvailable(
+        string? title,
+        string? author)
+    {
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"docs\":[]}");
+        var provider = CreateProvider(handler);
+
+        await provider.SearchAsync(
+            new BookSearchCompletion(title, author, "doctor makes monster"));
+
+        Assert.DoesNotContain("q=", handler.Request?.RequestUri?.Query);
     }
 
     [Fact]
@@ -190,7 +207,7 @@ public sealed class OpenLibraryBookProviderTests
 
     private static OpenLibraryBookProvider CreateProvider(
         HttpMessageHandler handler,
-        int searchLimit = 12)
+        int searchLimit = 25)
     {
         var client = new HttpClient(handler)
         {
@@ -209,7 +226,7 @@ public sealed class OpenLibraryBookProviderTests
         var settings = new Dictionary<string, string?>
         {
             [$"{OpenLibraryOptions.SectionName}:BaseUrl"] = "https://openlibrary.org/",
-            [$"{OpenLibraryOptions.SectionName}:SearchLimit"] = "12",
+            [$"{OpenLibraryOptions.SectionName}:SearchLimit"] = "25",
             [$"{OpenLibraryOptions.SectionName}:RetryCount"] = "2",
             [$"{OpenLibraryOptions.SectionName}:RetryDelayMilliseconds"] = "0",
             [$"{OpenLibraryOptions.SectionName}:UserAgent"] = "FindThatBook.Tests/1.0"
