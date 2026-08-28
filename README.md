@@ -52,8 +52,9 @@ The endpoint validates the query and searches Open Library through an
 `IBookProvider` implementation. Each result includes its title, author names,
 first publication year when known, Open Library work key and link, a cover URL
 when available, and a concise explanation of the match. Open Library's response
-models remain internal to the provider, and its default relevance ordering is
-preserved.
+models remain internal to the provider. A second Gemini prompt internally scores
+the candidates against the original request and extracted keywords; only candidates
+scoring above 60 are returned, in descending score order.
 
 Open Library settings are under `OpenLibrary` in
 `src/FindThatBook.Api/appsettings.json`.

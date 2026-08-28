@@ -39,6 +39,67 @@ public sealed class BookSearchServiceTests
         Assert.Null(books.Search);
     }
 
+    [Fact]
+    public async Task SearchAsync_RanksFiltersAndOrdersOpenLibraryCandidates()
+    {
+        var provider = new RecordingBookProvider(
+            CreateBook("Weak match"),
+            CreateBook("Best match"),
+            CreateBook("Borderline match"),
+            CreateBook("Good match"));
+        var rankedBooks = provider.Results
+            .Select((book, index) => new RankedBook(
+                new[] { 42, 98, 60, 61 }[index],
+                new[]
+                {
+                    "Only broad details overlap.",
+                    "  The title and author strongly match the request.  ",
+                    "The evidence is too weak.",
+                    "The setting and plot details plausibly match."
+                }[index],
+                book))
+            .ToList();
+        var languageModel = new StubLanguageModelProvider(
+            new BookSearchCompletion(null, null, "whale captain"),
+            new BookRankingCompletion(rankedBooks));
+        var service = CreateService(provider, languageModel);
+
+        var results = await service.SearchAsync("a whale and an obsessive captain");
+
+        Assert.Collection(
+            results,
+            book =>
+            {
+                Assert.Equal("Best match", book.Title);
+                Assert.Equal(
+                    "The title and author strongly match the request.",
+                    book.Explanation);
+            },
+            book =>
+            {
+                Assert.Equal("Good match", book.Title);
+                Assert.Equal(
+                    "The setting and plot details plausibly match.",
+                    book.Explanation);
+            });
+        Assert.Equal(
+            [new PromptId("book-search", 3), new PromptId("book-ranking", 1)],
+            languageModel.PromptIds);
+    }
+
+    [Fact]
+    public async Task SearchAsync_DoesNotRankWhenOpenLibraryReturnsNoCandidates()
+    {
+        var languageModel = new StubLanguageModelProvider(
+            new BookSearchCompletion(null, null, "unknown details"));
+        var service = CreateService(new RecordingBookProvider(), languageModel);
+
+        var results = await service.SearchAsync("unknown book");
+
+        Assert.Empty(results);
+        Assert.Equal([new PromptId("book-search", 3)], languageModel.PromptIds);
+    }
+
     private static BookSearchService CreateService(
         IBookProvider books,
         ILanguageModelProvider languageModel) =>
@@ -47,25 +108,43 @@ public sealed class BookSearchServiceTests
             languageModel,
             NullLogger<BookSearchService>.Instance);
 
-    private sealed class RecordingBookProvider : IBookProvider
+    private static Book CreateBook(string title) =>
+        new(
+            title,
+            "An author",
+            null,
+            string.Empty,
+            null,
+            null,
+            null,
+            null,
+            "Open Library ranked this work as relevant to the query.");
+
+    private sealed class RecordingBookProvider(params Book[] results) : IBookProvider
     {
         public BookSearchCompletion? Search { get; private set; }
+
+        public IReadOnlyList<Book> Results => results;
 
         public Task<IReadOnlyList<Book>> SearchAsync(
             BookSearchCompletion search,
             CancellationToken cancellationToken = default)
         {
             Search = search;
-            return Task.FromResult<IReadOnlyList<Book>>([]);
+            return Task.FromResult<IReadOnlyList<Book>>(results);
         }
     }
 
-    private sealed class StubLanguageModelProvider(object response)
+    private sealed class StubLanguageModelProvider(params object[] responses)
         : ILanguageModelProvider
     {
+        private int _responseIndex;
+
         public bool WasCalled { get; private set; }
 
         public PromptId? PromptId { get; private set; }
+
+        public List<PromptId> PromptIds { get; } = [];
 
         public Task<TResponse> GenerateAsync<TResponse>(
             ILanguageModelPrompt<TResponse> prompt,
@@ -73,7 +152,8 @@ public sealed class BookSearchServiceTests
         {
             WasCalled = true;
             PromptId = prompt.Id;
-            return Task.FromResult((TResponse)response);
+            PromptIds.Add(prompt.Id);
+            return Task.FromResult((TResponse)responses[_responseIndex++]);
         }
     }
 

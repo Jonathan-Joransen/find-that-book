@@ -78,7 +78,7 @@ public sealed class OpenLibraryBookProviderTests
         var book = Assert.Single(books);
         Assert.Equal("Unknown author", book.Author);
         Assert.Null(book.FirstPublishYear);
-        Assert.Equal("No description is available from Open Library.", book.Description);
+        Assert.Empty(book.Description);
         Assert.Null(book.OpenLibraryKey);
         Assert.Null(book.OpenLibraryUrl);
         Assert.Null(book.CoverId);
@@ -196,7 +196,10 @@ public sealed class OpenLibraryBookProviderTests
         {
             BaseAddress = new Uri("https://openlibrary.org/")
         };
-        var options = Options.Create(new OpenLibraryOptions { SearchLimit = searchLimit });
+        var options = Options.Create(new OpenLibraryOptions
+        {
+            SearchLimit = searchLimit
+        });
 
         return new OpenLibraryBookProvider(client, options);
     }

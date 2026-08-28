@@ -12,7 +12,6 @@ public sealed class OpenLibraryBookProvider : IBookProvider
 {
     private const string Fields = "key,title,author_name,first_publish_year,first_sentence,cover_i";
     private const string UnknownAuthor = "Unknown author";
-    private const string MissingDescription = "No description is available from Open Library.";
     private const string CoverBaseUrl = "https://covers.openlibrary.org/b/id/";
 
     private static readonly HashSet<string> NonDistinctiveTerms = new(StringComparer.OrdinalIgnoreCase)
@@ -123,7 +122,7 @@ public sealed class OpenLibraryBookProvider : IBookProvider
             title,
             authors is { Length: > 0 } ? string.Join(", ", authors) : UnknownAuthor,
             document.FirstPublishYear,
-            firstSentence?.Trim() ?? MissingDescription,
+            firstSentence?.Trim() ?? string.Empty,
             openLibraryKey,
             openLibraryUrl,
             document.CoverId,
