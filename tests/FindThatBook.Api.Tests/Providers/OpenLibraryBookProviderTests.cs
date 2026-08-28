@@ -44,8 +44,8 @@ public sealed class OpenLibraryBookProviderTests
         Assert.Equal("Herman Melville", book.Author);
         Assert.Equal(1851, book.FirstPublishYear);
         Assert.Equal("Call me Ishmael.", book.Description);
-        Assert.Equal("/works/OL102749W", book.OpenLibraryKey);
-        Assert.Equal("https://openlibrary.org/works/OL102749W", book.OpenLibraryUrl);
+        Assert.Equal("/works/OL102749W", book.BookKey);
+        Assert.Equal("https://openlibrary.org/works/OL102749W", book.BookUrl);
         Assert.Equal(10521270, book.CoverId);
         Assert.Equal(
             "https://covers.openlibrary.org/b/id/10521270-M.jpg",
@@ -79,8 +79,8 @@ public sealed class OpenLibraryBookProviderTests
         Assert.Equal("Unknown author", book.Author);
         Assert.Null(book.FirstPublishYear);
         Assert.Empty(book.Description);
-        Assert.Null(book.OpenLibraryKey);
-        Assert.Null(book.OpenLibraryUrl);
+        Assert.Null(book.BookKey);
+        Assert.Null(book.BookUrl);
         Assert.Null(book.CoverId);
         Assert.Null(book.CoverImageUrl);
         Assert.Equal("The title shares distinctive terms with the query.", book.Explanation);
@@ -111,7 +111,7 @@ public sealed class OpenLibraryBookProviderTests
             new BookSearchCompletion("The Hobbit", "J.R.R. Tolkien", null));
 
         var book = Assert.Single(books);
-        Assert.Equal("/works/OL262758W", book.OpenLibraryKey);
+        Assert.Equal("/works/OL262758W", book.BookKey);
         Assert.Equal("Strong title and primary-author match.", book.Explanation);
         Assert.Equal(
             "?title=The%20Hobbit&author=J.R.R.%20Tolkien&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=12",

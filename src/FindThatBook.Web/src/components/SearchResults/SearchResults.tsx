@@ -2,8 +2,8 @@ import { BookCard } from '../BookCard/BookCard'
 import type { SearchResultsProps } from './SearchResults.models'
 import './SearchResults.css'
 
-function getBookKey(openLibraryKey: string | null, title: string, author: string) {
-  return openLibraryKey ?? `${title}-${author}`
+function getBookKey(bookKey: string | null, title: string, author: string) {
+  return bookKey ?? `${title}-${author}`
 }
 
 export function SearchResults({ books, query, isLoading }: SearchResultsProps) {
@@ -20,7 +20,7 @@ export function SearchResults({ books, query, isLoading }: SearchResultsProps) {
       {books.length > 0 ? (
         <div className="search-results__grid">
           {books.map((book, index) => {
-            const bookKey = getBookKey(book.openLibraryKey, book.title, book.author)
+            const bookKey = getBookKey(book.bookKey, book.title, book.author)
             return (
               <BookCard
                 key={`${bookKey}-${index}`}

@@ -110,10 +110,10 @@ public sealed class OpenLibraryBookProvider : IBookProvider
             .FirstOrDefault(sentence => !string.IsNullOrWhiteSpace(sentence));
 
         var title = document.Title!.Trim();
-        var openLibraryKey = NormalizeOpenLibraryKey(document.Key);
-        var openLibraryUrl = openLibraryKey is null
+        var bookKey = NormalizeOpenLibraryKey(document.Key);
+        var bookUrl = bookKey is null
             ? null
-            : new Uri(new Uri(_options.BaseUrl), openLibraryKey.TrimStart('/')).ToString();
+            : new Uri(new Uri(_options.BaseUrl), bookKey.TrimStart('/')).ToString();
         var coverImageUrl = document.CoverId is null
             ? null
             : $"{CoverBaseUrl}{document.CoverId}-M.jpg";
@@ -123,8 +123,8 @@ public sealed class OpenLibraryBookProvider : IBookProvider
             authors is { Length: > 0 } ? string.Join(", ", authors) : UnknownAuthor,
             document.FirstPublishYear,
             firstSentence?.Trim() ?? string.Empty,
-            openLibraryKey,
-            openLibraryUrl,
+            bookKey,
+            bookUrl,
             document.CoverId,
             coverImageUrl,
             BuildMatchExplanation(search, title, authors, firstSentence));

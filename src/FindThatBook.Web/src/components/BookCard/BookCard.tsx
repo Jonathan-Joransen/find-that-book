@@ -20,25 +20,22 @@ export function BookCard({ book }: BookCardProps) {
 
   return (
     <article className="book-card">
-      {book.openLibraryUrl ? (
-        <a className="book-card__cover-link" href={book.openLibraryUrl} target="_blank" rel="noreferrer">
+      {book.bookUrl ? (
+        <a className="book-card__cover-link" href={book.bookUrl} target="_blank" rel="noreferrer">
           {cover}
         </a>
       ) : cover}
 
       <div className="book-card__details">
         <h3>
-          {book.openLibraryUrl ? (
-            <a href={book.openLibraryUrl} target="_blank" rel="noreferrer">{book.title}</a>
+          {book.bookUrl ? (
+            <a href={book.bookUrl} target="_blank" rel="noreferrer">{book.title}</a>
           ) : book.title}
         </h3>
         <p className="book-card__byline">by {book.author}</p>
         {book.description && <p className="book-card__description">{book.description}</p>}
         {book.firstPublishYear && (
           <p className="book-card__year">First published {book.firstPublishYear}</p>
-        )}
-        {book.openLibraryKey && (
-          <p className="book-card__identifier">Open Library {book.openLibraryKey}</p>
         )}
         <p className="book-card__explanation">
           <strong>Why it matched:</strong> {book.explanation}

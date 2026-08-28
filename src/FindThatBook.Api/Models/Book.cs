@@ -5,8 +5,8 @@ public sealed record Book(
     string Author,
     int? FirstPublishYear,
     string Description,
-    string? OpenLibraryKey,
-    string? OpenLibraryUrl,
+    string? BookKey,
+    string? BookUrl,
     int? CoverId,
     string? CoverImageUrl,
     string Explanation);

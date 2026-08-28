@@ -50,7 +50,7 @@ Open `http://localhost:5173`. Vite proxies `POST /book/search` to the API at
 
 The endpoint validates the query and searches Open Library through an
 `IBookProvider` implementation. Each result includes its title, author names,
-first publication year when known, Open Library work key and link, a cover URL
+first publication year when known, a book key and link, a cover URL
 when available, and a concise explanation of the match. Open Library's response
 models remain internal to the provider. A second Gemini prompt internally scores
 the candidates against the original request and extracted keywords; only candidates
