@@ -49,8 +49,7 @@ public sealed class BookSearchServiceTests
             languageModel,
             Options.Create(new LanguageModelOptions
             {
-                Enabled = enabled,
-                Provider = "Gemini"
+                Enabled = enabled
             }),
             NullLogger<BookSearchService>.Instance);
 

@@ -31,8 +31,7 @@ public sealed class BookSearchService(
 
             searchQuery = completion.SearchQuery.Trim();
             logger.LogInformation(
-                "Refined book search with {Provider} using prompt {PromptId}.",
-                _languageModelOptions.Provider,
+                "Refined book search with Gemini using prompt {PromptId}.",
                 prompt.Id);
         }
 

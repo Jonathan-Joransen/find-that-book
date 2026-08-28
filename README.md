@@ -57,32 +57,23 @@ Open Library settings are under `OpenLibrary` in
 Before deploying an instance that sends regular traffic, update `UserAgent` to
 include a contact email, as requested by Open Library's API usage guidelines.
 
-## Language model providers
+## Gemini query refinement
 
 Language-model query refinement is disabled by default, so local search works
 without an API key. When enabled, `BookSearchService` sends a typed
-`BookSearchPrompt` to the selected language-model provider. The resulting
+`BookSearchPrompt` to Gemini. The resulting
 structured query is validated and then sent to Open Library for book metadata.
 
 Enable Gemini:
 
 ```bash
 export LanguageModel__Enabled=true
-export LanguageModel__Provider=Gemini
 export GEMINI_API_KEY=your-key
 ```
 
-Switch to OpenAI without changing application code:
-
-```bash
-export LanguageModel__Enabled=true
-export LanguageModel__Provider=OpenAI
-export OPENAI_API_KEY=your-key
-```
-
-Provider model names can be overridden with `Gemini__Model` or
-`OpenAI__Model`. API keys should be supplied through environment variables or a
-local secret store and should never be committed.
+The model name can be overridden with `Gemini__Model`. API keys should be
+supplied through environment variables or a local secret store and should never
+be committed.
 
 ## Tests
 
