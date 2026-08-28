@@ -30,7 +30,8 @@ internal static class LanguageModelResponseGenerator
             useJsonSchemaResponseFormat: true,
             cancellationToken);
 
-        prompt.Validate(response.Result);
-        return response.Result;
+        var normalizedResponse = prompt.Normalize(response.Result);
+        prompt.Validate(normalizedResponse);
+        return normalizedResponse;
     }
 }

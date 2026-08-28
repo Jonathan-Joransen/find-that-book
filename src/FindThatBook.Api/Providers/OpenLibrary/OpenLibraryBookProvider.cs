@@ -46,7 +46,7 @@ public sealed class OpenLibraryBookProvider : IBookProvider
         if (string.IsNullOrWhiteSpace(search.Title) &&
             string.IsNullOrWhiteSpace(search.Author))
         {
-            AddSearchParameter(searchParameters, "q", search.Keywords);
+            AddSearchParameter(searchParameters, "q", JoinKeywords(search.Keywords));
         }
 
         if (searchParameters.Count == 0)
@@ -191,9 +191,11 @@ public sealed class OpenLibraryBookProvider : IBookProvider
             return "Strong title match.";
         }
 
-        var queryTerms = GetDistinctiveTerms(
-            string.Join(' ', new[] { search.Title, search.Author, search.Keywords }
-                .Where(value => !string.IsNullOrWhiteSpace(value))));
+        var queryEvidence = new[] { search.Title, search.Author }
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value!)
+            .Concat(search.Keywords ?? []);
+        var queryTerms = GetDistinctiveTerms(string.Join(' ', queryEvidence));
         var titleTermMatches = GetDistinctiveTerms(title).Count(queryTerms.Contains);
         var authorTermMatch = authors?.SelectMany(GetDistinctiveTerms).Any(queryTerms.Contains) == true;
 
@@ -223,6 +225,9 @@ public sealed class OpenLibraryBookProvider : IBookProvider
 
     private static string NormalizeForComparison(string? value) =>
         string.Concat((value ?? string.Empty).Where(char.IsLetterOrDigit)).ToLowerInvariant();
+
+    private static string? JoinKeywords(IReadOnlyList<string>? keywords) =>
+        keywords is { Count: > 0 } ? string.Join(' ', keywords) : null;
 
     private static HashSet<string> GetDistinctiveTerms(string value) =>
         Regex.Split(value.ToLowerInvariant(), @"[^\p{L}\p{N}]+")

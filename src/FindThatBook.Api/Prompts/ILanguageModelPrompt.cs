@@ -10,5 +10,7 @@ public interface ILanguageModelPrompt<TResponse>
 
     LanguageModelSettings Settings { get; }
 
+    TResponse Normalize(TResponse response) => response;
+
     void Validate(TResponse response);
 }

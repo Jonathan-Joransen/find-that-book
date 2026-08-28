@@ -12,14 +12,16 @@ namespace FindThatBook.Api.Tests.Integration;
 public sealed class BookSearchIntegrationTests(ITestOutputHelper output)
 {
     [GeminiIntegrationTheory]
-    [InlineData("dickens", null, "Charles Dickens", null)]
-    [InlineData("prince of wales", "Prince of Wales", null, null)]
-    [InlineData("moby whale", "Moby-Dick", "Herman Melville", "whale")]
+    [InlineData("dickens", null, "Charles Dickens", null, false)]
+    [InlineData("prince of wales", "Prince of Wales", null, null, false)]
+    [InlineData("moby whale", "Moby-Dick", "Herman Melville", "whale", false)]
+    [InlineData("the book about a doctor who makes a monstor", "Frankenstein", "Shelley", "doctor monster", true)]
     public async Task GenerateAsync_ReturnsExpectedBookSearchCompletion(
         string input,
         string? expectedTitle,
         string? expectedAuthor,
-        string? expectedKeywords)
+        string? expectedKeywords,
+        bool expectedTitleAndAuthorAreFragments)
     {
         using var languageModel = CreateLanguageModel();
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
@@ -31,14 +33,20 @@ public sealed class BookSearchIntegrationTests(ITestOutputHelper output)
         output.WriteLine($"Input: {input}");
         output.WriteLine($"Title: {response.Title ?? "<null>"}");
         output.WriteLine($"Author: {response.Author ?? "<null>"}");
-        output.WriteLine($"Keywords: {response.Keywords ?? "<null>"}");
+        output.WriteLine($"Keywords: {(response.Keywords is null ? "<null>" : string.Join(", ", response.Keywords))}");
 
-        var expected = new BookSearchCompletion(
-            expectedTitle,
-            expectedAuthor,
-            expectedKeywords);
+        if (expectedTitleAndAuthorAreFragments)
+        {
+            Assert.Contains(expectedTitle!, response.Title, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(expectedAuthor!, response.Author, StringComparison.OrdinalIgnoreCase);
+        }
+        else
+        {
+            Assert.Equal(expectedTitle, response.Title);
+            Assert.Equal(expectedAuthor, response.Author);
+        }
 
-        Assert.Equal(expected, response);
+        Assert.Equal(expectedKeywords?.Split(' '), response.Keywords);
     }
 
     private static GeminiLanguageModelProvider CreateLanguageModel()

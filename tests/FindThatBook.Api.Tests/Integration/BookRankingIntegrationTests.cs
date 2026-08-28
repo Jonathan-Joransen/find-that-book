@@ -28,7 +28,7 @@ public sealed class BookRankingIntegrationTests(ITestOutputHelper output)
     {
         var rankedBook = await RankAsync(
             input,
-            keywords,
+            keywords is null ? null : [keywords],
             CreateBook(title, author, firstPublishYear, description));
 
         Assert.True(
@@ -50,7 +50,7 @@ public sealed class BookRankingIntegrationTests(ITestOutputHelper output)
     {
         var rankedBook = await RankAsync(
             input,
-            keywords,
+            keywords is null ? null : [keywords],
             CreateBook(title, author, firstPublishYear, description));
 
         Assert.True(
@@ -60,7 +60,7 @@ public sealed class BookRankingIntegrationTests(ITestOutputHelper output)
 
     private async Task<RankedBook> RankAsync(
         string input,
-        string? keywords,
+        IReadOnlyList<string>? keywords,
         Book book)
     {
         using var languageModel = CreateLanguageModel();

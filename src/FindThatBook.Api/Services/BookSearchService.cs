@@ -33,7 +33,7 @@ public sealed class BookSearchService(
             "Step 1 complete. Extracted title {Title}, author {Author}, and keywords {Keywords}.",
             completion.Title,
             completion.Author,
-            completion.Keywords);
+            completion.Keywords is null ? null : string.Join(", ", completion.Keywords));
 
         logger.LogInformation("Step 2: searching Open Library with the extracted evidence.");
         var candidates = await bookProvider.SearchAsync(completion, cancellationToken);

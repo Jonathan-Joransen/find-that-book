@@ -110,7 +110,7 @@ public sealed class OpenLibraryBookProviderTests
         var provider = CreateProvider(handler);
 
         var books = await provider.SearchAsync(
-            new BookSearchCompletion(null, null, "anonymous"));
+            new BookSearchCompletion(null, null, ["anonymous"]));
 
         var book = Assert.Single(books);
         Assert.Equal("Unknown author", book.Author);
@@ -167,7 +167,7 @@ public sealed class OpenLibraryBookProviderTests
         var provider = CreateProvider(handler);
 
         await provider.SearchAsync(
-            new BookSearchCompletion(title, author, "doctor makes monster"));
+            new BookSearchCompletion(title, author, ["doctor", "monster"]));
 
         Assert.DoesNotContain("q=", handler.Request?.RequestUri?.Query);
     }
@@ -210,7 +210,7 @@ public sealed class OpenLibraryBookProviderTests
         var provider = serviceProvider.GetRequiredService<IBookProvider>();
 
         var books = await provider.SearchAsync(
-            new BookSearchCompletion(null, null, "recovered"));
+            new BookSearchCompletion(null, null, ["recovered"]));
 
         Assert.Equal(2, handler.RequestCount);
         Assert.Equal("Recovered book", Assert.Single(books).Title);
@@ -224,7 +224,7 @@ public sealed class OpenLibraryBookProviderTests
         var provider = serviceProvider.GetRequiredService<IBookProvider>();
 
         await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync(
-            new BookSearchCompletion(null, null, "bad request")));
+            new BookSearchCompletion(null, null, ["bad", "request"])));
 
         Assert.Equal(1, handler.RequestCount);
     }
@@ -237,7 +237,7 @@ public sealed class OpenLibraryBookProviderTests
         var provider = serviceProvider.GetRequiredService<IBookProvider>();
 
         await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync(
-            new BookSearchCompletion(null, null, "unavailable")));
+            new BookSearchCompletion(null, null, ["unavailable"])));
 
         Assert.Equal(3, handler.RequestCount);
     }

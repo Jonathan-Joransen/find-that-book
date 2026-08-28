@@ -7,5 +7,5 @@ public sealed record BookSearchCompletion(
     string? Title,
     [property: Description("The likely book author, or null when no author can be identified.")]
     string? Author,
-    [property: Description("Concise subjects, settings, plot details, or other distinctive search keywords, or null when none can be identified.")]
-    string? Keywords);
+    [property: Description("Distinct, independently useful subjects, settings, characters, objects, or concepts, or null when none can be identified.")]
+    IReadOnlyList<string>? Keywords);

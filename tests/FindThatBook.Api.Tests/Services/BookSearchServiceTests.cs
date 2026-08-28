@@ -16,16 +16,16 @@ public sealed class BookSearchServiceTests
     {
         var books = new RecordingBookProvider();
         var languageModel = new StubLanguageModelProvider(
-            new BookSearchCompletion("Moby Dick", "Herman Melville", "whaling voyage"));
+            new BookSearchCompletion("Moby Dick", "Herman Melville", ["voyage", "whaling"]));
         var service = CreateService(books, languageModel);
 
         await service.SearchAsync("a whale and an obsessive captain");
 
-        Assert.Equal(
-            new BookSearchCompletion("Moby Dick", "Herman Melville", "whaling voyage"),
-            books.Search);
+        Assert.Equal("Moby Dick", books.Search?.Title);
+        Assert.Equal("Herman Melville", books.Search?.Author);
+        Assert.Equal(["voyage", "whaling"], books.Search?.Keywords);
         Assert.True(languageModel.WasCalled);
-        Assert.Equal(new PromptId("book-search", 3), languageModel.PromptId);
+        Assert.Equal(new PromptId("book-search", 5), languageModel.PromptId);
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public sealed class BookSearchServiceTests
                 book))
             .ToList();
         var languageModel = new StubLanguageModelProvider(
-            new BookSearchCompletion(null, null, "whale captain"),
+            new BookSearchCompletion(null, null, ["captain", "whale"]),
             new BookRankingCompletion(rankedBooks));
         var service = CreateService(provider, languageModel);
 
@@ -84,7 +84,7 @@ public sealed class BookSearchServiceTests
                     book.Explanation);
             });
         Assert.Equal(
-            [new PromptId("book-search", 3), new PromptId("book-ranking", 1)],
+            [new PromptId("book-search", 5), new PromptId("book-ranking", 1)],
             languageModel.PromptIds);
     }
 
@@ -92,13 +92,13 @@ public sealed class BookSearchServiceTests
     public async Task SearchAsync_DoesNotRankWhenOpenLibraryReturnsNoCandidates()
     {
         var languageModel = new StubLanguageModelProvider(
-            new BookSearchCompletion(null, null, "unknown details"));
+            new BookSearchCompletion(null, null, ["details", "unknown"]));
         var service = CreateService(new RecordingBookProvider(), languageModel);
 
         var results = await service.SearchAsync("unknown book");
 
         Assert.Empty(results);
-        Assert.Equal([new PromptId("book-search", 3)], languageModel.PromptIds);
+        Assert.Equal([new PromptId("book-search", 5)], languageModel.PromptIds);
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public sealed class BookSearchServiceTests
     {
         var provider = new RecordingBookProvider(CreateBook("Moby Dick"));
         var languageModel = new StubLanguageModelProvider(
-            new BookSearchCompletion("Moby Dick", "Herman Melville", "whaling voyage"),
+            new BookSearchCompletion("Moby Dick", "Herman Melville", ["voyage", "whaling"]),
             new BookRankingCompletion(
             [
                 new RankedBook(95, "The title and author match.", provider.Results[0])

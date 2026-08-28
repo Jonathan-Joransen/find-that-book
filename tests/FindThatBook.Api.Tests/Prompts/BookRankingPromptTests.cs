@@ -14,14 +14,16 @@ public sealed class BookRankingPromptTests
     {
         var prompt = new BookRankingPrompt(
             "  a whale and an obsessive captain  ",
-            "  whaling voyage  ",
+            ["voyage", "whaling"],
             [CreateBook("Moby Dick", "Herman Melville")]);
 
         using var request = JsonDocument.Parse(prompt.UserMessage);
         var root = request.RootElement;
 
         Assert.Equal("a whale and an obsessive captain", root.GetProperty("initialUserPrompt").GetString());
-        Assert.Equal("whaling voyage", root.GetProperty("keywords").GetString());
+        Assert.Equal(
+            ["voyage", "whaling"],
+            root.GetProperty("keywords").EnumerateArray().Select(value => value.GetString()));
         var book = Assert.Single(root.GetProperty("books").EnumerateArray());
         Assert.Equal("Moby Dick", book.GetProperty("title").GetString());
         Assert.Equal("Herman Melville", book.GetProperty("author").GetString());
@@ -97,7 +99,7 @@ public sealed class BookRankingPromptTests
     private static BookRankingPrompt CreatePrompt(int bookCount) =>
         new(
             "sea story",
-            "ocean",
+            ["ocean"],
             Enumerable.Range(1, bookCount)
                 .Select(index => CreateBook($"Book {index}", $"Author {index}"))
                 .ToArray());

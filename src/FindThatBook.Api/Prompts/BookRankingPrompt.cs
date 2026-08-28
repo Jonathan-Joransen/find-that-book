@@ -12,7 +12,7 @@ public sealed class BookRankingPrompt : ILanguageModelPrompt<BookRankingCompleti
 
     public BookRankingPrompt(
         string initialUserPrompt,
-        string? keywords,
+        IReadOnlyList<string>? keywords,
         IReadOnlyList<Book> books)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(initialUserPrompt);
@@ -27,7 +27,7 @@ public sealed class BookRankingPrompt : ILanguageModelPrompt<BookRankingCompleti
         UserMessage = JsonSerializer.Serialize(
             new RankingRequest(
                 initialUserPrompt.Trim(),
-                string.IsNullOrWhiteSpace(keywords) ? null : keywords.Trim(),
+                keywords is { Count: > 0 } ? keywords : null,
                 books),
             JsonOptions);
     }
@@ -86,6 +86,6 @@ public sealed class BookRankingPrompt : ILanguageModelPrompt<BookRankingCompleti
 
     private sealed record RankingRequest(
         string InitialUserPrompt,
-        string? Keywords,
+        IReadOnlyList<string>? Keywords,
         IReadOnlyList<Book> Books);
 }
