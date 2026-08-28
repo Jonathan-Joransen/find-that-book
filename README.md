@@ -66,7 +66,8 @@ include a contact email, as requested by Open Library's API usage guidelines.
 ## Gemini query refinement
 
 `BookSearchService` sends a typed `BookSearchPrompt` to Gemini for every search. The resulting
-structured query is validated and then sent to Open Library for book metadata.
+nullable title, author, and keyword evidence is validated and sent to Open Library as separate
+search fields for book metadata.
 Configure the Gemini API key before starting the API:
 
 ```bash
@@ -84,3 +85,14 @@ be committed.
 ```bash
 dotnet test FindThatBook.slnx
 ```
+
+Live book-search prompt integration tests run when a Gemini API key is available
+and are skipped when one is not configured. To run only these tests:
+
+```bash
+dotnet test FindThatBook.slnx --filter Category=Integration \
+  --logger "console;verbosity=detailed"
+```
+
+The tests read `Gemini:ApiKey` from the API project's user secrets or
+`GEMINI_API_KEY` from the environment. Set `Gemini__Model` to override the model.

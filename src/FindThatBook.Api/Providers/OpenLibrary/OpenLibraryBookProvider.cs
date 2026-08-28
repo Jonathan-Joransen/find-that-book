@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using FindThatBook.Api.Models;
+using FindThatBook.Api.Models.LanguageModels;
 using Microsoft.Extensions.Options;
 
 namespace FindThatBook.Api.Providers.OpenLibrary;
@@ -31,18 +32,48 @@ public sealed class OpenLibraryBookProvider : IBookProvider
     }
 
     public async Task<IReadOnlyList<Book>> SearchAsync(
-        string bookInformation,
+        BookSearchCompletion search,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(bookInformation);
+        ArgumentNullException.ThrowIfNull(search);
 
-        var requestUri = $"search.json?q={Uri.EscapeDataString(bookInformation.Trim())}" +
-                         $"&fields={Uri.EscapeDataString(Fields)}" +
-                         $"&limit={_options.SearchLimit}";
+        var searchParameters = new List<string>();
+        AddSearchParameter(searchParameters, "title", search.Title);
+        AddSearchParameter(searchParameters, "author", search.Author);
+        AddSearchParameter(searchParameters, "q", search.Keywords);
+
+        if (searchParameters.Count == 0)
+        {
+            throw new ArgumentException(
+                "At least one title, author, or keyword value is required.",
+                nameof(search));
+        }
+
+        searchParameters.Add($"fields={Uri.EscapeDataString(Fields)}");
+        searchParameters.Add($"limit={_options.SearchLimit}");
+        var requestUri = $"search.json?{string.Join('&', searchParameters)}";
 
         using var response = await _httpClient.GetAsync(requestUri, cancellationToken);
         response.EnsureSuccessStatusCode();
+        return await ReadBooksAsync(response, search, cancellationToken);
+    }
 
+    private static void AddSearchParameter(
+        ICollection<string> parameters,
+        string name,
+        string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            parameters.Add($"{name}={Uri.EscapeDataString(value.Trim())}");
+        }
+    }
+
+    private async Task<IReadOnlyList<Book>> ReadBooksAsync(
+        HttpResponseMessage response,
+        BookSearchCompletion search,
+        CancellationToken cancellationToken)
+    {
         OpenLibrarySearchResponse? searchResponse;
 
         try
@@ -64,11 +95,11 @@ public sealed class OpenLibraryBookProvider : IBookProvider
 
         return searchResponse.Documents
             .Where(document => !string.IsNullOrWhiteSpace(document.Title))
-            .Select(document => MapBook(document, bookInformation))
+            .Select(document => MapBook(document, search))
             .ToArray();
     }
 
-    private Book MapBook(OpenLibrarySearchDocument document, string searchQuery)
+    private Book MapBook(OpenLibrarySearchDocument document, BookSearchCompletion search)
     {
         var authors = document.AuthorNames?
             .Where(author => !string.IsNullOrWhiteSpace(author))
@@ -97,7 +128,7 @@ public sealed class OpenLibraryBookProvider : IBookProvider
             openLibraryUrl,
             document.CoverId,
             coverImageUrl,
-            BuildMatchExplanation(searchQuery, title, authors, firstSentence));
+            BuildMatchExplanation(search, title, authors, firstSentence));
     }
 
     private static string? NormalizeOpenLibraryKey(string? key)
@@ -120,16 +151,17 @@ public sealed class OpenLibraryBookProvider : IBookProvider
     }
 
     private static string BuildMatchExplanation(
-        string searchQuery,
+        BookSearchCompletion search,
         string title,
         IReadOnlyList<string>? authors,
         string? firstSentence)
     {
-        var normalizedQuery = NormalizeForComparison(searchQuery);
-        var exactTitleMatch = normalizedQuery.Contains(
+        var normalizedTitleEvidence = NormalizeForComparison(search.Title);
+        var normalizedAuthorEvidence = NormalizeForComparison(search.Author);
+        var exactTitleMatch = normalizedTitleEvidence.Contains(
             NormalizeForComparison(title),
             StringComparison.Ordinal);
-        var exactAuthorMatch = authors?.Any(author => normalizedQuery.Contains(
+        var exactAuthorMatch = authors?.Any(author => normalizedAuthorEvidence.Contains(
             NormalizeForComparison(author),
             StringComparison.Ordinal)) == true;
 
@@ -143,7 +175,9 @@ public sealed class OpenLibraryBookProvider : IBookProvider
             return "Strong title match.";
         }
 
-        var queryTerms = GetDistinctiveTerms(searchQuery);
+        var queryTerms = GetDistinctiveTerms(
+            string.Join(' ', new[] { search.Title, search.Author, search.Keywords }
+                .Where(value => !string.IsNullOrWhiteSpace(value))));
         var titleTermMatches = GetDistinctiveTerms(title).Count(queryTerms.Contains);
         var authorTermMatch = authors?.SelectMany(GetDistinctiveTerms).Any(queryTerms.Contains) == true;
 
@@ -171,8 +205,8 @@ public sealed class OpenLibraryBookProvider : IBookProvider
             : "Open Library ranked this work as relevant to the query.";
     }
 
-    private static string NormalizeForComparison(string value) =>
-        string.Concat(value.Where(char.IsLetterOrDigit)).ToLowerInvariant();
+    private static string NormalizeForComparison(string? value) =>
+        string.Concat((value ?? string.Empty).Where(char.IsLetterOrDigit)).ToLowerInvariant();
 
     private static HashSet<string> GetDistinctiveTerms(string value) =>
         Regex.Split(value.ToLowerInvariant(), @"[^\p{L}\p{N}]+")

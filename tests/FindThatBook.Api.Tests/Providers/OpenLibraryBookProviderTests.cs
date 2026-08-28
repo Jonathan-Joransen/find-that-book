@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using FindThatBook.Api.Extensions;
+using FindThatBook.Api.Models.LanguageModels;
 using FindThatBook.Api.Providers;
 using FindThatBook.Api.Providers.OpenLibrary;
 using Microsoft.Extensions.Configuration;
@@ -35,7 +36,8 @@ public sealed class OpenLibraryBookProviderTests
         var handler = new StubHttpMessageHandler(HttpStatusCode.OK, json);
         var provider = CreateProvider(handler, searchLimit: 5);
 
-        var books = await provider.SearchAsync("  moby dick  ");
+        var books = await provider.SearchAsync(
+            new BookSearchCompletion("  Moby Dick  ", null, null));
 
         var book = Assert.Single(books);
         Assert.Equal("Moby Dick", book.Title);
@@ -51,7 +53,7 @@ public sealed class OpenLibraryBookProviderTests
         Assert.Equal("Strong title match.", book.Explanation);
         Assert.Equal(HttpMethod.Get, handler.Request?.Method);
         Assert.Equal(
-            "?q=moby%20dick&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=5",
+            "?title=Moby%20Dick&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=5",
             handler.Request?.RequestUri?.Query);
     }
 
@@ -67,9 +69,11 @@ public sealed class OpenLibraryBookProviderTests
               ]
             }
             """;
-        var provider = CreateProvider(new StubHttpMessageHandler(HttpStatusCode.OK, json));
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, json);
+        var provider = CreateProvider(handler);
 
-        var books = await provider.SearchAsync("anonymous");
+        var books = await provider.SearchAsync(
+            new BookSearchCompletion(null, null, "anonymous"));
 
         var book = Assert.Single(books);
         Assert.Equal("Unknown author", book.Author);
@@ -80,6 +84,9 @@ public sealed class OpenLibraryBookProviderTests
         Assert.Null(book.CoverId);
         Assert.Null(book.CoverImageUrl);
         Assert.Equal("The title shares distinctive terms with the query.", book.Explanation);
+        Assert.Equal(
+            "?q=anonymous&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=12",
+            handler.Request?.RequestUri?.Query);
     }
 
     [Fact]
@@ -97,13 +104,18 @@ public sealed class OpenLibraryBookProviderTests
               ]
             }
             """;
-        var provider = CreateProvider(new StubHttpMessageHandler(HttpStatusCode.OK, json));
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, json);
+        var provider = CreateProvider(handler);
 
-        var books = await provider.SearchAsync("The Hobbit J.R.R. Tolkien");
+        var books = await provider.SearchAsync(
+            new BookSearchCompletion("The Hobbit", "J.R.R. Tolkien", null));
 
         var book = Assert.Single(books);
         Assert.Equal("/works/OL262758W", book.OpenLibraryKey);
         Assert.Equal("Strong title and primary-author match.", book.Explanation);
+        Assert.Equal(
+            "?title=The%20Hobbit&author=J.R.R.%20Tolkien&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=12",
+            handler.Request?.RequestUri?.Query);
     }
 
     [Fact]
@@ -112,7 +124,8 @@ public sealed class OpenLibraryBookProviderTests
         var provider = CreateProvider(
             new StubHttpMessageHandler(HttpStatusCode.ServiceUnavailable, "{}"));
 
-        await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync("moby dick"));
+        await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync(
+            new BookSearchCompletion("moby dick", null, null)));
     }
 
     [Fact]
@@ -120,7 +133,8 @@ public sealed class OpenLibraryBookProviderTests
     {
         var provider = CreateProvider(new StubHttpMessageHandler(HttpStatusCode.OK, "not-json"));
 
-        await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync("moby dick"));
+        await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync(
+            new BookSearchCompletion("moby dick", null, null)));
     }
 
     [Fact]
@@ -141,7 +155,8 @@ public sealed class OpenLibraryBookProviderTests
         await using var serviceProvider = CreateServiceProvider(handler);
         var provider = serviceProvider.GetRequiredService<IBookProvider>();
 
-        var books = await provider.SearchAsync("recovered");
+        var books = await provider.SearchAsync(
+            new BookSearchCompletion(null, null, "recovered"));
 
         Assert.Equal(2, handler.RequestCount);
         Assert.Equal("Recovered book", Assert.Single(books).Title);
@@ -154,7 +169,8 @@ public sealed class OpenLibraryBookProviderTests
         await using var serviceProvider = CreateServiceProvider(handler);
         var provider = serviceProvider.GetRequiredService<IBookProvider>();
 
-        await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync("bad request"));
+        await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync(
+            new BookSearchCompletion(null, null, "bad request")));
 
         Assert.Equal(1, handler.RequestCount);
     }
@@ -166,7 +182,8 @@ public sealed class OpenLibraryBookProviderTests
         await using var serviceProvider = CreateServiceProvider(handler);
         var provider = serviceProvider.GetRequiredService<IBookProvider>();
 
-        await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync("unavailable"));
+        await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync(
+            new BookSearchCompletion(null, null, "unavailable")));
 
         Assert.Equal(3, handler.RequestCount);
     }

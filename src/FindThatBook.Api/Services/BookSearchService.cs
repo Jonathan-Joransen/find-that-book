@@ -16,17 +16,15 @@ public sealed class BookSearchService(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(query);
 
-        var searchQuery = query.Trim();
-        var prompt = new BookSearchPrompt(searchQuery);
+        var prompt = new BookSearchPrompt(query);
         BookSearchCompletion completion = await languageModelProvider.GenerateAsync(
             prompt,
             cancellationToken);
 
-        searchQuery = completion.SearchQuery.Trim();
         logger.LogInformation(
             "Refined book search using prompt {PromptId}.",
             prompt.Id);
 
-        return await bookProvider.SearchAsync(searchQuery, cancellationToken);
+        return await bookProvider.SearchAsync(completion, cancellationToken);
     }
 }

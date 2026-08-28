@@ -15,14 +15,16 @@ public sealed class BookSearchServiceTests
     {
         var books = new RecordingBookProvider();
         var languageModel = new StubLanguageModelProvider(
-            new BookSearchCompletion("Moby Dick Herman Melville"));
+            new BookSearchCompletion("Moby Dick", "Herman Melville", "whaling voyage"));
         var service = CreateService(books, languageModel);
 
         await service.SearchAsync("a whale and an obsessive captain");
 
-        Assert.Equal("Moby Dick Herman Melville", books.Query);
+        Assert.Equal(
+            new BookSearchCompletion("Moby Dick", "Herman Melville", "whaling voyage"),
+            books.Search);
         Assert.True(languageModel.WasCalled);
-        Assert.Equal(new PromptId("book-search", 1), languageModel.PromptId);
+        Assert.Equal(new PromptId("book-search", 3), languageModel.PromptId);
     }
 
     [Fact]
@@ -34,7 +36,7 @@ public sealed class BookSearchServiceTests
         await Assert.ThrowsAsync<LanguageModelException>(
             () => service.SearchAsync("  original query  "));
 
-        Assert.Null(books.Query);
+        Assert.Null(books.Search);
     }
 
     private static BookSearchService CreateService(
@@ -47,13 +49,13 @@ public sealed class BookSearchServiceTests
 
     private sealed class RecordingBookProvider : IBookProvider
     {
-        public string? Query { get; private set; }
+        public BookSearchCompletion? Search { get; private set; }
 
         public Task<IReadOnlyList<Book>> SearchAsync(
-            string bookInformation,
+            BookSearchCompletion search,
             CancellationToken cancellationToken = default)
         {
-            Query = bookInformation;
+            Search = search;
             return Task.FromResult<IReadOnlyList<Book>>([]);
         }
     }

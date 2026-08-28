@@ -18,7 +18,10 @@ internal static class LanguageModelResponseGenerator
         var options = new ChatOptions
         {
             Temperature = prompt.Settings.Temperature,
-            MaxOutputTokens = prompt.Settings.MaximumOutputTokens
+            MaxOutputTokens = prompt.Settings.MaximumOutputTokens,
+            Reasoning = prompt.Settings.ReasoningEffort is { } effort
+                ? new ReasoningOptions { Effort = effort }
+                : null
         };
 
         var response = await chatClient.GetResponseAsync<TResponse>(
