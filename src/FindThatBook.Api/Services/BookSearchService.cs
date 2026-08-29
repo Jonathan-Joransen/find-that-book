@@ -16,6 +16,7 @@ public sealed class BookSearchService(
         ArgumentException.ThrowIfNullOrWhiteSpace(query);
 
         logger.LogInformation("Starting book search for query {Query}.", query.Trim());
+
         var ranking = await bookFinder.FindAsync(query.Trim(), cancellationToken);
         var results = ranking
             .Where(book => book.Score > MinimumSearchRankingScore)
