@@ -7,7 +7,7 @@ using FindThatBook.Api.Models.LanguageModels;
 using FindThatBook.Api.Providers.BookProviders;
 using Microsoft.Extensions.AI;
 
-namespace FindThatBook.Api.Services;
+namespace FindThatBook.Api.Services.BookFinding;
 
 internal sealed class BookSearchSession
 {

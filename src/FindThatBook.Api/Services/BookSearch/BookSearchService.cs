@@ -1,6 +1,7 @@
 using FindThatBook.Api.Models;
+using FindThatBook.Api.Services.BookFinding;
 
-namespace FindThatBook.Api.Services;
+namespace FindThatBook.Api.Services.BookSearch;
 
 public sealed class BookSearchService(
     IBookFinder bookFinder,

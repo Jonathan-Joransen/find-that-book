@@ -1,4 +1,4 @@
-namespace FindThatBook.Api.Services;
+namespace FindThatBook.Api.Services.BookSearch;
 
 public sealed class BookSearchOptions
 {

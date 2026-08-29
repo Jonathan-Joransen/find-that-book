@@ -3,7 +3,7 @@ using FindThatBook.Api.Prompts;
 using FindThatBook.Api.Providers.BookProviders;
 using FindThatBook.Api.Providers.LanguageModelProviders;
 
-namespace FindThatBook.Api.Services;
+namespace FindThatBook.Api.Services.BookFinding;
 
 public sealed class LanguageModelBookFinder(
     IBookProvider bookProvider,

@@ -1,5 +1,5 @@
 using FindThatBook.Api.Models.LanguageModels;
-using FindThatBook.Api.Services;
+using FindThatBook.Api.Services.BookFinding;
 using Microsoft.Extensions.AI;
 
 namespace FindThatBook.Api.Prompts;

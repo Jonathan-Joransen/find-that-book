@@ -1,7 +1,7 @@
 using FindThatBook.Api.Controllers;
 using FindThatBook.Api.Models;
 using FindThatBook.Api.Models.Requests;
-using FindThatBook.Api.Services;
+using FindThatBook.Api.Services.BookSearch;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Hybrid;

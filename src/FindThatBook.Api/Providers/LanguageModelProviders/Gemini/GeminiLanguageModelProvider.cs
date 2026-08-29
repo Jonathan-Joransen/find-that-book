@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using FindThatBook.Api.Prompts;
 using FindThatBook.Api.Providers.LanguageModelProviders;
-using FindThatBook.Api.Services;
+using FindThatBook.Api.Services.BookFinding;
 using Google.GenAI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;

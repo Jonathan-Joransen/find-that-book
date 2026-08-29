@@ -1,5 +1,5 @@
 using FindThatBook.Api.Extensions;
-using FindThatBook.Api.Services;
+using FindThatBook.Api.Services.BookSearch;
 
 var builder = WebApplication.CreateBuilder(args);
 

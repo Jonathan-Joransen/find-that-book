@@ -1,6 +1,6 @@
 using FindThatBook.Api.Models.LanguageModels;
 
-namespace FindThatBook.Api.Services;
+namespace FindThatBook.Api.Services.BookFinding;
 
 public interface IBookFinder
 {

@@ -1,6 +1,6 @@
 using FindThatBook.Api.Models;
 
-namespace FindThatBook.Api.Services;
+namespace FindThatBook.Api.Services.BookSearch;
 
 public interface IBookSearchService
 {

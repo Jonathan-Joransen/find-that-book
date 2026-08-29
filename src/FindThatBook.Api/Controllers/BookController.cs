@@ -3,7 +3,7 @@ using System.Text;
 using FindThatBook.Api.Models;
 using FindThatBook.Api.Models.Requests;
 using FindThatBook.Api.Providers.LanguageModelProviders;
-using FindThatBook.Api.Services;
+using FindThatBook.Api.Services.BookSearch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Options;

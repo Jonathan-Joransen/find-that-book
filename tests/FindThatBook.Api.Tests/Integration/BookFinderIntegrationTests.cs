@@ -3,7 +3,7 @@ using FindThatBook.Api.Models.LanguageModels;
 using FindThatBook.Api.Providers.BookProviders;
 using FindThatBook.Api.Providers.LanguageModelProviders;
 using FindThatBook.Api.Providers.LanguageModelProviders.Gemini;
-using FindThatBook.Api.Services;
+using FindThatBook.Api.Services.BookFinding;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;

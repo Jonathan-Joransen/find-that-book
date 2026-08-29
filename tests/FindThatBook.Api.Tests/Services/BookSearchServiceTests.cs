@@ -1,7 +1,8 @@
 using FindThatBook.Api.Models;
 using FindThatBook.Api.Models.LanguageModels;
 using FindThatBook.Api.Providers.LanguageModelProviders;
-using FindThatBook.Api.Services;
+using FindThatBook.Api.Services.BookFinding;
+using FindThatBook.Api.Services.BookSearch;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
