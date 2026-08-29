@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using FindThatBook.Api.Models;
 using FindThatBook.Api.Models.LanguageModels;
-using FindThatBook.Api.Providers;
+using FindThatBook.Api.Providers.BookProviders;
 using Microsoft.Extensions.AI;
 
 namespace FindThatBook.Api.Services;

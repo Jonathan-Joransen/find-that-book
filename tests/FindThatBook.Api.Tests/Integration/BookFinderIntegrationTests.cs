@@ -1,7 +1,8 @@
 using FindThatBook.Api.Models;
 using FindThatBook.Api.Models.LanguageModels;
-using FindThatBook.Api.Providers;
-using FindThatBook.Api.Providers.Gemini;
+using FindThatBook.Api.Providers.BookProviders;
+using FindThatBook.Api.Providers.LanguageModelProviders;
+using FindThatBook.Api.Providers.LanguageModelProviders.Gemini;
 using FindThatBook.Api.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;

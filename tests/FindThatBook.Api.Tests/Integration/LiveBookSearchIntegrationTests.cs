@@ -1,8 +1,8 @@
 using FindThatBook.Api.Extensions;
 using FindThatBook.Api.Models;
-using FindThatBook.Api.Providers;
-using FindThatBook.Api.Providers.Gemini;
-using FindThatBook.Api.Providers.OpenLibrary;
+using FindThatBook.Api.Providers.BookProviders;
+using FindThatBook.Api.Providers.BookProviders.OpenLibrary;
+using FindThatBook.Api.Providers.LanguageModelProviders.Gemini;
 using FindThatBook.Api.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

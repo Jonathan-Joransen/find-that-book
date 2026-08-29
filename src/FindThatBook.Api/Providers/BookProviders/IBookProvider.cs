@@ -1,6 +1,6 @@
 using FindThatBook.Api.Models;
 
-namespace FindThatBook.Api.Providers;
+namespace FindThatBook.Api.Providers.BookProviders;
 
 public interface IBookProvider
 {

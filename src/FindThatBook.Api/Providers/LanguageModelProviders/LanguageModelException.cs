@@ -1,4 +1,4 @@
-namespace FindThatBook.Api.Providers;
+namespace FindThatBook.Api.Providers.LanguageModelProviders;
 
 public sealed class LanguageModelException : Exception
 {

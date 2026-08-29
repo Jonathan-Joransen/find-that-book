@@ -1,6 +1,6 @@
 using System.Net.Http.Headers;
-using FindThatBook.Api.Providers;
-using FindThatBook.Api.Providers.OpenLibrary;
+using FindThatBook.Api.Providers.BookProviders;
+using FindThatBook.Api.Providers.BookProviders.OpenLibrary;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using Polly;

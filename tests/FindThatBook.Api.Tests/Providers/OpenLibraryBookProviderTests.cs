@@ -2,8 +2,8 @@ using System.Net;
 using System.Text;
 using FindThatBook.Api.Extensions;
 using FindThatBook.Api.Models;
-using FindThatBook.Api.Providers;
-using FindThatBook.Api.Providers.OpenLibrary;
+using FindThatBook.Api.Providers.BookProviders;
+using FindThatBook.Api.Providers.BookProviders.OpenLibrary;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -52,7 +52,7 @@ public sealed class OpenLibraryBookProviderTests
         Assert.Equal(
             "https://covers.openlibrary.org/b/id/10521270-M.jpg",
             book.CoverImageUrl);
-        Assert.Equal("Strong title match.", book.Explanation);
+        Assert.Empty(book.Explanation);
         Assert.Equal(HttpMethod.Get, handler.Request?.Method);
         Assert.Equal(
             "?title=Moby%20Dick&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=5",
@@ -120,14 +120,14 @@ public sealed class OpenLibraryBookProviderTests
         Assert.Null(book.BookUrl);
         Assert.Null(book.CoverId);
         Assert.Null(book.CoverImageUrl);
-        Assert.Equal("The title shares distinctive terms with the query.", book.Explanation);
+        Assert.Empty(book.Explanation);
         Assert.Equal(
             "?q=anonymous&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=25",
             handler.Request?.RequestUri?.Query);
     }
 
     [Fact]
-    public async Task SearchAsync_ExplainsCombinedTitleAndAuthorMatch()
+    public async Task SearchAsync_NormalizesBareWorkKey()
     {
         const string json = """
             {
@@ -149,7 +149,7 @@ public sealed class OpenLibraryBookProviderTests
 
         var book = Assert.Single(books);
         Assert.Equal("/works/OL262758W", book.BookKey);
-        Assert.Equal("Strong title and primary-author match.", book.Explanation);
+        Assert.Empty(book.Explanation);
         Assert.Equal(
             "?title=The%20Hobbit&author=J.R.R.%20Tolkien&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=25",
             handler.Request?.RequestUri?.Query);

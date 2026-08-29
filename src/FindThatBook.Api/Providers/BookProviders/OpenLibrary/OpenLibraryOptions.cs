@@ -1,4 +1,4 @@
-namespace FindThatBook.Api.Providers.OpenLibrary;
+namespace FindThatBook.Api.Providers.BookProviders.OpenLibrary;
 
 public sealed class OpenLibraryOptions
 {

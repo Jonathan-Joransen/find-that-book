@@ -1,4 +1,4 @@
-using FindThatBook.Api.Providers.Gemini;
+using FindThatBook.Api.Providers.LanguageModelProviders.Gemini;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 
