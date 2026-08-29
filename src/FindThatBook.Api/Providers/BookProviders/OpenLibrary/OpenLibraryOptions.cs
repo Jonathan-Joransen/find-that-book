@@ -8,6 +8,8 @@ public sealed class OpenLibraryOptions
 
     public int SearchLimit { get; init; } = 25;
 
+    public int SearchCacheDurationMinutes { get; init; } = 360;
+
     public int RetryCount { get; init; } = 2;
 
     public int RetryDelayMilliseconds { get; init; } = 250;

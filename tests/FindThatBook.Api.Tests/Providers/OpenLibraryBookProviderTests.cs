@@ -242,6 +242,36 @@ public sealed class OpenLibraryBookProviderTests
         Assert.Equal(3, handler.RequestCount);
     }
 
+    [Fact]
+    public async Task SearchAsync_CachesRepeatedEquivalentRequests()
+    {
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"docs\":[]}");
+        await using var serviceProvider = CreateServiceProvider(handler);
+        var provider = serviceProvider.GetRequiredService<IBookProvider>();
+
+        await provider.SearchAsync(new BookSearchQuery("  Moby Dick ", null, null));
+        await provider.SearchAsync(new BookSearchQuery("moby dick", null, ["ignored"]));
+
+        Assert.Equal(1, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task SearchAsync_CoalescesConcurrentEquivalentRequests()
+    {
+        var handler = new DelayedHttpMessageHandler("{\"docs\":[]}");
+        await using var serviceProvider = CreateServiceProvider(handler);
+        var provider = serviceProvider.GetRequiredService<IBookProvider>();
+
+        var searches = Enumerable.Range(0, 5)
+            .Select(_ => provider.SearchAsync(
+                new BookSearchQuery(null, null, ["whale", "captain"])))
+            .ToArray();
+
+        await Task.WhenAll(searches);
+
+        Assert.Equal(1, handler.RequestCount);
+    }
+
     private static OpenLibraryBookProvider CreateProvider(
         HttpMessageHandler handler,
         int searchLimit = 25,
@@ -268,6 +298,7 @@ public sealed class OpenLibraryBookProviderTests
         {
             [$"{OpenLibraryOptions.SectionName}:BaseUrl"] = "https://openlibrary.org/",
             [$"{OpenLibraryOptions.SectionName}:SearchLimit"] = "25",
+            [$"{OpenLibraryOptions.SectionName}:SearchCacheDurationMinutes"] = "360",
             [$"{OpenLibraryOptions.SectionName}:RetryCount"] = "2",
             [$"{OpenLibraryOptions.SectionName}:RetryDelayMilliseconds"] = "0",
             [$"{OpenLibraryOptions.SectionName}:UserAgent"] = "FindThatBook.Tests/1.0"
@@ -280,7 +311,7 @@ public sealed class OpenLibraryBookProviderTests
         services.AddLogging();
         services.AddOpenLibrary(configuration);
         services
-            .AddHttpClient<IBookProvider, OpenLibraryBookProvider>()
+            .AddHttpClient<OpenLibraryBookProvider>()
             .ConfigurePrimaryHttpMessageHandler(() => handler);
 
         return services.BuildServiceProvider();
@@ -329,6 +360,26 @@ public sealed class OpenLibraryBookProviderTests
                     Encoding.UTF8,
                     "application/json")
             });
+        }
+    }
+
+    private sealed class DelayedHttpMessageHandler(string responseBody) : HttpMessageHandler
+    {
+        private int _requestCount;
+
+        public int RequestCount => _requestCount;
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _requestCount);
+            await Task.Delay(50, cancellationToken);
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(responseBody, Encoding.UTF8, "application/json")
+            };
         }
     }
 }

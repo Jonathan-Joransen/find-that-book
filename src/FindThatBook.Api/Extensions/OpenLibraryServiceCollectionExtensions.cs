@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using FindThatBook.Api.Providers.BookProviders;
 using FindThatBook.Api.Providers.BookProviders.OpenLibrary;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using Polly;
@@ -30,6 +31,9 @@ public static class OpenLibraryServiceCollectionExtensions
                 options => options.SearchLimit is >= 1 and <= 100,
                 "OpenLibrary:SearchLimit must be between 1 and 100.")
             .Validate(
+                options => options.SearchCacheDurationMinutes is >= 1 and <= 1440,
+                "OpenLibrary:SearchCacheDurationMinutes must be between 1 and 1440.")
+            .Validate(
                 options => options.RetryCount is >= 0 and <= 5,
                 "OpenLibrary:RetryCount must be between 0 and 5.")
             .Validate(
@@ -40,8 +44,11 @@ public static class OpenLibraryServiceCollectionExtensions
                 "OpenLibrary:UserAgent is required.")
             .ValidateOnStart();
 
+        services.AddHybridCache();
+        services.AddTransient<IBookProvider, CachedOpenLibraryBookProvider>();
+
         services
-            .AddHttpClient<IBookProvider, OpenLibraryBookProvider>((provider, client) =>
+            .AddHttpClient<OpenLibraryBookProvider>((provider, client) =>
             {
                 var options = provider.GetRequiredService<IOptions<OpenLibraryOptions>>().Value;
 
