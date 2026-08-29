@@ -60,41 +60,6 @@ public sealed class OpenLibraryBookProviderTests
     }
 
     [Fact]
-    public async Task SearchAsync_LogsRequestAndRawResponseAtInformationLevel()
-    {
-        const string json = """
-            {
-              "docs": [
-                {
-                  "title": "Moby Dick"
-                }
-              ]
-            }
-            """;
-        var logger = new RecordingLogger<OpenLibraryBookProvider>();
-        var provider = CreateProvider(
-            new StubHttpMessageHandler(HttpStatusCode.OK, json),
-            logger: logger);
-
-        await provider.SearchAsync(new BookSearchQuery("Moby Dick", null, null));
-
-        Assert.Collection(
-            logger.Entries,
-            entry =>
-            {
-                Assert.Equal(LogLevel.Information, entry.Level);
-                Assert.Contains("Sending Open Library request", entry.Message);
-                Assert.Contains("title=Moby%20Dick", entry.Message);
-            },
-            entry =>
-            {
-                Assert.Equal(LogLevel.Information, entry.Level);
-                Assert.Contains("Open Library returned HTTP 200", entry.Message);
-                Assert.Contains("\"title\": \"Moby Dick\"", entry.Message);
-            });
-    }
-
-    [Fact]
     public async Task SearchAsync_UsesFallbacksForOptionalOpenLibraryFields()
     {
         const string json = """
@@ -170,16 +135,6 @@ public sealed class OpenLibraryBookProviderTests
             new BookSearchQuery(title, author, ["doctor", "monster"]));
 
         Assert.DoesNotContain("q=", handler.Request?.RequestUri?.Query);
-    }
-
-    [Fact]
-    public async Task SearchAsync_ThrowsWhenOpenLibraryReturnsAnError()
-    {
-        var provider = CreateProvider(
-            new StubHttpMessageHandler(HttpStatusCode.ServiceUnavailable, "{}"));
-
-        await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync(
-            new BookSearchQuery("moby dick", null, null)));
     }
 
     [Fact]

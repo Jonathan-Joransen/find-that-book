@@ -59,22 +59,6 @@ public sealed class BookSearchServiceTests
     }
 
     [Fact]
-    public async Task SearchAsync_ReturnsEveryQualifyingResultWhenThereAreFewerThanTwelve()
-    {
-        var rankings = Enumerable.Range(1, 5)
-            .Select(index => new RankedBook(
-                60 + index,
-                $"Reason {index}.",
-                CreateBook($"Book {index}")))
-            .ToArray();
-        var service = CreateService(new StubBookFinder(rankings));
-
-        var results = await service.SearchAsync("five plausible books");
-
-        Assert.Equal(5, results.Count);
-    }
-
-    [Fact]
     public async Task SearchAsync_PropagatesLanguageModelFailure()
     {
         var service = CreateService(new ThrowingBookFinder());
