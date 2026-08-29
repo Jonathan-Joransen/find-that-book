@@ -2,6 +2,21 @@
 
 A full-stack book discovery app with a .NET Web API and React frontend.
 
+## Features completed
+
+- Accepts sparse, noisy, and descriptive plain-text book queries up to 500 characters.
+- Uses a bounded Gemini tool-calling workflow to interpret likely titles, authors, and
+  distinctive keywords and to refine weak or ambiguous searches.
+- Retrieves candidates from Open Library and enriches a bounded shortlist with canonical
+  work and author data.
+- Preserves structured author evidence, separates explicit contributor roles from primary
+  work authors, and falls back safely when enrichment data is unavailable.
+- Returns an ordered candidate list with title, author, publication year, Open Library link,
+  cover when available, match score, and a grounded explanation.
+- Provides a responsive React UI with loading, error, empty-result, and repeated-search states.
+- Retries transient Open Library failures with bounded exponential backoff and jitter.
+- Includes unit, controlled Gemini integration, and opt-in live external tests.
+
 ## Project structure
 
 ```text
@@ -48,7 +63,8 @@ Open `http://localhost:5173`. Vite proxies `POST /book/search` to the API at
 }
 ```
 
-The endpoint validates the query and searches Open Library through an
+The endpoint trims the query, rejects blank values and values longer than 500 characters,
+and searches Open Library through an
 `IBookProvider` implementation. Each result includes its title, author names,
 first publication year when known, a book key and link, a cover URL
 when available, a match score, and a concise explanation of the match. Open Library's
@@ -101,11 +117,41 @@ The model name can be overridden with `Gemini__Model`. API keys should be
 supplied through environment variables or a local secret store and should never
 be committed.
 
-## Tests
+## Assumptions and design decisions
+
+- This is a human-facing discovery workflow, so a trimmed query must contain between 1 and
+  500 characters. The same upper bound is enforced by both the UI and API.
+- Open Library's search ranking is useful for initial candidate retrieval, but its flattened
+  author names are not considered verified primary-author evidence.
+- A canonical work author with no role, or an explicit author/writer role, is treated as a
+  primary author. Other explicit roles are retained as contributor evidence. Search-only
+  author names remain marked as unverified.
+- Canonical enrichment is limited to the first `WorkEnrichmentLimit` search results to bound
+  latency and external requests. Failed enrichment does not fail an otherwise usable search.
+- Gemini may reformulate retrieval and rank candidates, but it can return only opaque IDs for
+  records supplied by the server. The application validates those IDs, scores, explanations,
+  result count, and ordering.
+- Scores are request-relative ranking signals rather than calibrated probabilities. The
+  application returns only candidates scoring above 60 and no more than 12 results.
+
+Additional rationale is documented in [tradeoffs.md](tradeoffs.md).
+
+## Testing strategy
 
 ```bash
 dotnet test FindThatBook.slnx
 ```
+
+The default suite focuses on the boundaries with the highest correctness risk:
+
+- API validation for blank, oversized, and maximum-length queries.
+- Open Library request construction, response mapping, canonical author enrichment,
+  contributor separation, fallback behavior, request-local caching, and retries.
+- Gemini prompt/tool constraints, candidate identity, structured author evidence, output
+  validation, score filtering, ordering, and result caps.
+- Controlled Gemini scenarios for descriptive searches, partial titles, noisy mixed
+  title/author text, ambiguous author-only searches, and primary-author versus contributor
+  evidence.
 
 Controlled book-finder integration tests use live Gemini with deterministic candidate
 books. They run when a Gemini API key is available and are skipped otherwise:
@@ -131,3 +177,19 @@ and a maximum of 12 results.
 
 The tests read `Gemini:ApiKey` from the API project's user secrets or
 `GEMINI_API_KEY` from the environment. Set `Gemini__Model` to override the model.
+
+## Known limitations and next improvements
+
+- Gemini is currently required for every search; there is no deterministic retrieval and
+  ranking fallback when the model is unavailable.
+- De-duplication across different Open Library work keys is instructed and model-validated
+  only indirectly; canonical cross-work grouping is not enforced by application code.
+- Canonical work and author data can still be incomplete or incorrect, and enrichment is
+  intentionally limited to the highest-ranked search results.
+- Work and author lookups are cached only for the current provider session. A production
+  deployment would add bounded cross-request caching and fuller request metrics.
+- The UI currently presents a general search failure message rather than distinguishing
+  validation, Gemini, and Open Library failures, and it does not yet have automated component
+  or browser tests.
+- More time would also go toward alias, diacritic, subtitle, translation, and misspelling
+  normalization; deterministic evidence scoring; accessibility review; and a deployed demo.

@@ -4,6 +4,17 @@ using Xunit;
 
 namespace FindThatBook.Api.Tests.Integration;
 
+internal sealed class GeminiIntegrationFactAttribute : FactAttribute
+{
+    public GeminiIntegrationFactAttribute()
+    {
+        if (string.IsNullOrWhiteSpace(GeminiIntegrationTestConfiguration.GetOptions().ApiKey))
+        {
+            Skip = "Configure Gemini:ApiKey in user secrets or GEMINI_API_KEY to run live Gemini tests.";
+        }
+    }
+}
+
 internal sealed class GeminiIntegrationTheoryAttribute : TheoryAttribute
 {
     public GeminiIntegrationTheoryAttribute()

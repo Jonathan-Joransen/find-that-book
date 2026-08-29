@@ -25,19 +25,21 @@ public sealed class BookController : ControllerBase
         [FromBody] SearchBooksRequest request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Query))
+        var query = request.Query?.Trim();
+
+        if (query is null ||
+            query.Length is < SearchBooksRequest.MinimumQueryLength or > SearchBooksRequest.MaximumQueryLength)
         {
             return BadRequest(new ProblemDetails
             {
-                Title = "A search query is required.",
-                Detail = "Provide a non-empty query value in the request body.",
-                Status = StatusCodes.Status400BadRequest
+                Title = "The search query length is invalid.",
+                Detail = $"Provide a query between {SearchBooksRequest.MinimumQueryLength} and {SearchBooksRequest.MaximumQueryLength} characters."
             });
         }
 
         try
         {
-            var books = await _bookSearchService.SearchAsync(request.Query, cancellationToken);
+            var books = await _bookSearchService.SearchAsync(query, cancellationToken);
             return Ok(books);
         }
         catch (LanguageModelException)
