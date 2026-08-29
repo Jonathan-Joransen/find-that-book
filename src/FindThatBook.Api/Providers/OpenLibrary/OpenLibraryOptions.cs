@@ -1,4 +1,4 @@
-namespace FindThatBook.Api.Providers.BookProviders.OpenLibrary;
+namespace FindThatBook.Api.Providers.OpenLibrary;
 
 public sealed class OpenLibraryOptions
 {
@@ -7,8 +7,6 @@ public sealed class OpenLibraryOptions
     public string BaseUrl { get; init; } = "https://openlibrary.org/";
 
     public int SearchLimit { get; init; } = 25;
-
-    public int WorkEnrichmentLimit { get; init; } = 5;
 
     public int RetryCount { get; init; } = 2;
 

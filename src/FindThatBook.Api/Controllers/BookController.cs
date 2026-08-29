@@ -1,6 +1,6 @@
 using FindThatBook.Api.Models;
 using FindThatBook.Api.Models.Requests;
-using FindThatBook.Api.Providers.LanguageModelProviders;
+using FindThatBook.Api.Providers;
 using FindThatBook.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 

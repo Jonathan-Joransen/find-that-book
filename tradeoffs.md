@@ -21,21 +21,3 @@ This design has less predictable latency than a fixed pipeline because difficult
 additional Open Library and model round trips. In exchange, it can recover from a plausible but wrong
 title or author by inspecting weak results and trying a materially different query. The hard limits,
 canonical server-side metadata, output validation, and read-only tool keep that flexibility controlled.
-
-## Bounded Canonical Author Enrichment
-
-Open Library search results can contain multiple names in `author_name` without enough
-provenance to safely call every name a primary author. The provider therefore retains the
-parallel `author_key` values and enriches only the first configured number of results from
-their canonical `/works/{id}.json` records.
-
-Canonical work author references without a role, or with an explicit author/writer role,
-are treated as primary-author evidence. Other explicit roles remain structured contributor
-evidence. If a canonical author key is absent from the search result, the provider resolves
-its display name from the author endpoint. Repeated work and author lookups are cached for
-the request, and failed enrichment falls back to search names marked as unverified.
-
-This adds network latency, so enrichment is bounded by `WorkEnrichmentLimit` and runs only
-for Open Library's highest-ranked search results. Open Library records can still be missing
-or incorrect; canonical evidence is stronger provenance, not a guarantee of bibliographic
-correctness.

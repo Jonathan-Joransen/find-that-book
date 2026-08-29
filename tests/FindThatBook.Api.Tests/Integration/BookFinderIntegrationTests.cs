@@ -1,8 +1,7 @@
 using FindThatBook.Api.Models;
 using FindThatBook.Api.Models.LanguageModels;
-using FindThatBook.Api.Providers.BookProviders;
-using FindThatBook.Api.Providers.LanguageModelProviders;
-using FindThatBook.Api.Providers.LanguageModelProviders.Gemini;
+using FindThatBook.Api.Providers;
+using FindThatBook.Api.Providers.Gemini;
 using FindThatBook.Api.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -137,62 +136,10 @@ public sealed class BookFinderIntegrationTests(ITestOutputHelper output)
 
         Assert.True(rankings.Count >= 2, "An ambiguous author-only query should return several plausible books.");
         Assert.All(rankings, ranking => Assert.Contains(
-            ranking.Book.Authors,
-            author => author.IsPrimary &&
-                      author.Name.Contains("Dickens", StringComparison.OrdinalIgnoreCase)));
+            "Dickens",
+            ranking.Book.Author,
+            StringComparison.OrdinalIgnoreCase));
         Assert.InRange(bookProvider.SearchCount, 1, BookSearchSession.MaximumSearches);
-    }
-
-    [GeminiIntegrationFact]
-    public async Task FindAsync_PrefersPrimaryAuthorOverContributorOnlyMatch()
-    {
-        const string input = "alan lee";
-        var primaryAuthorBook = CreateBook(
-            "The Lord of the Rings Sketchbook",
-            "Alan Lee",
-            2005,
-            "Alan Lee presents sketches and finished art from Middle-earth.",
-            "/works/OL8457773W",
-            new BookAuthor(
-                "/authors/OL284568A",
-                "Alan Lee",
-                null,
-                true,
-                "canonicalWork"));
-        var contributorOnlyBook = CreateBook(
-            "The Hobbit",
-            "J. R. R. Tolkien",
-            1937,
-            "Bilbo Baggins joins a company of dwarves on a quest.",
-            "/works/OL27482W",
-            new BookAuthor(
-                "/authors/OL26320A",
-                "J. R. R. Tolkien",
-                null,
-                true,
-                "canonicalWork"),
-            new BookAuthor(
-                "/authors/OL284568A",
-                "Alan Lee",
-                "Illustrator",
-                false,
-                "canonicalWork"));
-        var bookProvider = new StubBookProvider(contributorOnlyBook, primaryAuthorBook);
-        using var languageModel = CreateLanguageModel();
-        var finder = CreateFinder(bookProvider, languageModel);
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(90));
-
-        var rankings = await finder.FindAsync(input, timeout.Token);
-
-        var bestMatch = Assert.IsType<RankedBook>(rankings.FirstOrDefault());
-        Assert.Equal(primaryAuthorBook.BookKey, bestMatch.Book.BookKey);
-        var contributorRanking = rankings.FirstOrDefault(
-            ranking => ranking.Book.BookKey == contributorOnlyBook.BookKey);
-        if (contributorRanking is not null)
-        {
-            Assert.True(bestMatch.Score > contributorRanking.Score);
-            Assert.DoesNotContain("primary", contributorRanking.Reason, StringComparison.OrdinalIgnoreCase);
-        }
     }
 
     private static Book CreateBook(
@@ -200,10 +147,8 @@ public sealed class BookFinderIntegrationTests(ITestOutputHelper output)
         string author,
         int firstPublishYear,
         string description,
-        string bookKey,
-        params BookAuthor[] authors)
-    {
-        var book = new Book(
+        string bookKey) =>
+        new(
             title,
             author,
             firstPublishYear,
@@ -213,22 +158,6 @@ public sealed class BookFinderIntegrationTests(ITestOutputHelper output)
             null,
             null,
             "Open Library ranked this work as relevant to the query.");
-
-        return book with
-        {
-            Authors = authors.Length > 0
-                ? authors
-                :
-                [
-                    new BookAuthor(
-                        null,
-                        author,
-                        null,
-                        true,
-                        "canonicalWork")
-                ]
-        };
-    }
 
     private static GeminiLanguageModelProvider CreateLanguageModel() =>
         new(

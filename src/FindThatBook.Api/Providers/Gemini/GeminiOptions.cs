@@ -1,4 +1,4 @@
-namespace FindThatBook.Api.Providers.LanguageModelProviders.Gemini;
+namespace FindThatBook.Api.Providers.Gemini;
 
 public sealed class GeminiOptions
 {

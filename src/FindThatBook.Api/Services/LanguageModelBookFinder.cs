@@ -1,7 +1,6 @@
 using FindThatBook.Api.Models.LanguageModels;
 using FindThatBook.Api.Prompts;
-using FindThatBook.Api.Providers.BookProviders;
-using FindThatBook.Api.Providers.LanguageModelProviders;
+using FindThatBook.Api.Providers;
 
 namespace FindThatBook.Api.Services;
 

@@ -1,5 +1,5 @@
-using FindThatBook.Api.Providers.LanguageModelProviders;
-using FindThatBook.Api.Providers.LanguageModelProviders.Gemini;
+using FindThatBook.Api.Providers;
+using FindThatBook.Api.Providers.Gemini;
 using FindThatBook.Api.Services;
 
 namespace FindThatBook.Api.Extensions;

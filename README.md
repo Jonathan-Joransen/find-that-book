@@ -1,6 +1,6 @@
 # Find That Book
 
-A full-stack book discovery app with a .NET Web API and React frontend.
+A starter full-stack book search app with a .NET Web API and React frontend.
 
 ## Features completed
 
@@ -73,19 +73,8 @@ can search Open Library up to three times, pool the candidates, and adapt its qu
 earlier results are weak. Only candidates scoring above 60 are returned, in descending
 score order, with a maximum of 12 results.
 
-Search results retain Open Library author IDs instead of treating the flattened
-`author_name` field as verified authorship. For the first `WorkEnrichmentLimit` results,
-the provider fetches the canonical work record, separates primary work authors from
-explicit roles such as illustrator or editor, and resolves an author record when the
-search response does not contain that author's name. The API keeps the existing `author`
-display string and also returns structured `authors` entries with their role, primary
-status, and evidence source. Work and author lookups are request-cached, and an enrichment
-failure falls back to search metadata marked as unverified rather than failing the search.
-
 Open Library settings are under `OpenLibrary` in
 `src/FindThatBook.Api/appsettings.json`.
-`WorkEnrichmentLimit` bounds the number of canonical work lookups per Open Library search;
-set it to `0` to disable enrichment.
 The Microsoft HTTP resilience pipeline retries transient timeouts, rate limits,
 and server errors with exponential backoff and jitter according to `RetryCount`
 and `RetryDelayMilliseconds`.

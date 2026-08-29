@@ -1,6 +1,6 @@
 using FindThatBook.Api.Prompts;
 
-namespace FindThatBook.Api.Providers.LanguageModelProviders;
+namespace FindThatBook.Api.Providers;
 
 public interface ILanguageModelProvider
 {

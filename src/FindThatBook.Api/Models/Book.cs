@@ -10,14 +10,4 @@ public sealed record Book(
     int? CoverId,
     string? CoverImageUrl,
     string Explanation,
-    int? Score = null)
-{
-    public IReadOnlyList<BookAuthor> Authors { get; init; } = [];
-}
-
-public sealed record BookAuthor(
-    string? AuthorKey,
-    string Name,
-    string? Role,
-    bool IsPrimary,
-    string Evidence);
+    int? Score = null);

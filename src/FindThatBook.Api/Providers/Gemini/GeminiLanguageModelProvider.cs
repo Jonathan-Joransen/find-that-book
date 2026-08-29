@@ -1,13 +1,12 @@
 using System.Diagnostics;
 using System.Text.Json;
 using FindThatBook.Api.Prompts;
-using FindThatBook.Api.Providers.LanguageModelProviders;
 using FindThatBook.Api.Services;
 using Google.GenAI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 
-namespace FindThatBook.Api.Providers.LanguageModelProviders.Gemini;
+namespace FindThatBook.Api.Providers.Gemini;
 
 public sealed class GeminiLanguageModelProvider : ILanguageModelProvider, IDisposable
 {

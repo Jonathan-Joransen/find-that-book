@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using FindThatBook.Api.Models;
 using FindThatBook.Api.Models.LanguageModels;
-using FindThatBook.Api.Providers.BookProviders;
+using FindThatBook.Api.Providers;
 using Microsoft.Extensions.AI;
 
 namespace FindThatBook.Api.Services;
@@ -128,15 +128,8 @@ internal sealed class BookSearchSession
             candidateId,
             book.Title,
             book.Author,
-            book.Authors
-                .Select(author => new BookSearchCandidateAuthor(
-                    author.Name,
-                    author.Role,
-                    author.IsPrimary,
-                    author.Evidence))
-                .ToArray(),
             book.FirstPublishYear,
-            LimitLength(book.Description, 1_200));
+            book.Description);
     }
 
     private static string GetBookIdentity(Book book) =>
@@ -146,9 +139,6 @@ internal sealed class BookSearchSession
 
     private static string? NormalizeOptionalText(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    private static string LimitLength(string value, int maximumLength) =>
-        value.Length <= maximumLength ? value : $"{value[..(maximumLength - 1)].TrimEnd()}…";
 }
 
 internal sealed record BookSearchToolResult(
@@ -159,15 +149,6 @@ internal sealed record BookSearchCandidate(
     [property: Description("Opaque ID to use when ranking this exact candidate.")]
     string CandidateId,
     string Title,
-    [property: Description("Display author text. Use structured authors and their evidence when judging author matches.")]
     string Author,
-    [property: Description("Structured author evidence. canonicalWork primary authors are strongest; non-primary roles are contributor evidence; searchResult names are unverified.")]
-    IReadOnlyList<BookSearchCandidateAuthor> Authors,
     int? FirstPublishYear,
     string Description);
-
-internal sealed record BookSearchCandidateAuthor(
-    string Name,
-    string? Role,
-    bool IsPrimary,
-    string Evidence);
