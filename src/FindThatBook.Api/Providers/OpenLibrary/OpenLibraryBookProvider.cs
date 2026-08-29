@@ -3,7 +3,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using FindThatBook.Api.Models;
-using FindThatBook.Api.Models.LanguageModels;
 using Microsoft.Extensions.Options;
 
 namespace FindThatBook.Api.Providers.OpenLibrary;
@@ -34,7 +33,7 @@ public sealed class OpenLibraryBookProvider : IBookProvider
     }
 
     public async Task<IReadOnlyList<Book>> SearchAsync(
-        BookSearchCompletion search,
+        BookSearchQuery search,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(search);
@@ -89,7 +88,7 @@ public sealed class OpenLibraryBookProvider : IBookProvider
 
     private IReadOnlyList<Book> ReadBooks(
         string responseBody,
-        BookSearchCompletion search)
+        BookSearchQuery search)
     {
         OpenLibrarySearchResponse? searchResponse;
 
@@ -115,7 +114,7 @@ public sealed class OpenLibraryBookProvider : IBookProvider
             .ToArray();
     }
 
-    private Book MapBook(OpenLibrarySearchDocument document, BookSearchCompletion search)
+    private Book MapBook(OpenLibrarySearchDocument document, BookSearchQuery search)
     {
         var authors = document.AuthorNames?
             .Where(author => !string.IsNullOrWhiteSpace(author))
@@ -167,7 +166,7 @@ public sealed class OpenLibraryBookProvider : IBookProvider
     }
 
     private static string BuildMatchExplanation(
-        BookSearchCompletion search,
+        BookSearchQuery search,
         string title,
         IReadOnlyList<string>? authors,
         string? firstSentence)

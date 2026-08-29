@@ -51,10 +51,11 @@ Open `http://localhost:5173`. Vite proxies `POST /book/search` to the API at
 The endpoint validates the query and searches Open Library through an
 `IBookProvider` implementation. Each result includes its title, author names,
 first publication year when known, a book key and link, a cover URL
-when available, and a concise explanation of the match. Open Library's response
-models remain internal to the provider. A second Gemini prompt internally scores
-the candidates against the original request and extracted keywords; only candidates
-scoring above 60 are returned, in descending score order.
+when available, a match score, and a concise explanation of the match. Open Library's
+response models remain internal to the provider. A bounded Gemini book-finder prompt
+can search Open Library up to three times, pool the candidates, and adapt its query when
+earlier results are weak. Only candidates scoring above 60 are returned, in descending
+score order, with a maximum of 12 results.
 
 Open Library settings are under `OpenLibrary` in
 `src/FindThatBook.Api/appsettings.json`.
@@ -65,15 +66,18 @@ Before deploying an instance that sends regular traffic, update `UserAgent` to
 include a contact email, as requested by Open Library's API usage guidelines.
 
 When the API runs in the `Development` environment, information-level console logs
-show each search step, the typed Gemini responses, and the raw Open Library response.
+show each tool search, the typed Gemini response, and the raw Open Library responses.
 The base configuration used by production and other environments raises the default
 minimum level to `Warning`, so response bodies and normal search details are not logged.
 
-## Gemini query refinement
+## Gemini book finder
 
-`BookSearchService` sends a typed `BookSearchPrompt` to Gemini for every search. The resulting
-nullable title, author, and keyword evidence is validated and sent to Open Library as separate
-search fields for book metadata.
+`LanguageModelBookFinder` sends a typed `BookFinderPrompt` to Gemini with a read-only
+`search_open_library` tool. Gemini must use the tool at least once and may refine the search
+up to three total calls. Tool results receive request-local candidate IDs; Gemini returns only
+those IDs with scores and reasons, and the application joins them back to the original Open
+Library records before returning them.
+
 Configure the Gemini API key before starting the API:
 
 ```bash
@@ -92,13 +96,27 @@ be committed.
 dotnet test FindThatBook.slnx
 ```
 
-Live book-search prompt integration tests run when a Gemini API key is available
-and are skipped when one is not configured. To run only these tests:
+Controlled book-finder integration tests use live Gemini with deterministic candidate
+books. They run when a Gemini API key is available and are skipped otherwise:
 
 ```bash
 dotnet test FindThatBook.slnx --filter Category=Integration \
   --logger "console;verbosity=detailed"
 ```
+
+An opt-in live-external suite sends curated reader descriptions through the complete
+Gemini and Open Library workflow and verifies the expected books and response invariants:
+
+```bash
+RUN_LIVE_EXTERNAL_TESTS=true dotnet test FindThatBook.slnx \
+  --filter Category=LiveExternal \
+  --logger "console;verbosity=detailed"
+```
+
+The external suite is excluded by default because its results depend on two live services.
+It currently covers descriptions for *Moby-Dick*, *Frankenstein*, and *The Hobbit* and
+asserts the expected title and author, scores above 60, descending order, populated reasons,
+and a maximum of 12 results.
 
 The tests read `Gemini:ApiKey` from the API project's user secrets or
 `GEMINI_API_KEY` from the environment. Set `Gemini__Model` to override the model.

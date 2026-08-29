@@ -1,5 +1,6 @@
 using FindThatBook.Api.Providers;
 using FindThatBook.Api.Providers.Gemini;
+using FindThatBook.Api.Services;
 
 namespace FindThatBook.Api.Extensions;
 
@@ -17,6 +18,7 @@ public static class LanguageModelServiceCollectionExtensions
             .ValidateOnStart();
 
         services.AddSingleton<ILanguageModelProvider, GeminiLanguageModelProvider>();
+        services.AddScoped<IBookFinder, LanguageModelBookFinder>();
 
         return services;
     }

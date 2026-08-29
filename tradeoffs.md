@@ -1,18 +1,23 @@
 # Architecture Tradeoffs
 
-## Explicit Pipeline vs. Tool Calling
+## Bounded Tool-Calling Book Finder
 
-We’re choosing the explicit pipeline:
+The search uses one `BookFinderPrompt` with access to a read-only `search_open_library`
+tool. Gemini interprets the reader's evidence, chooses an Open Library query, evaluates
+the returned candidates, and may reformulate the search when the first results are weak
+or ambiguous.
 
-**LLM extracts search terms → Open Library search → LLM ranks results**
+The agent is deliberately bounded:
 
-This approach gives us:
+- It must search Open Library before returning results.
+- It can make at most three sequential searches.
+- Each tool call accepts a likely title, likely author, and up to six distinctive keywords.
+- The application executes every Open Library request and retains the canonical book objects.
+- Gemini returns only opaque candidate IDs, scores, and short reasons; it cannot rewrite book metadata.
+- The server accepts only candidates observed in the current request, removes scores at or below 60,
+  sorts by descending score, and returns at most 12 books.
 
-- Predictable cost and latency: exactly two LLM calls and a controlled number of Open Library requests.
-- Easier testing: extraction, retrieval, and ranking can each be tested independently.
-- Better observability: we can see which stage failed and inspect its inputs and outputs.
-- Stronger control: the model cannot skip searches, repeat them unnecessarily, or exceed API limits.
-
-With tool calling, the model requests an Open Library search, our application executes it, and the results return to the model. This enables adaptive behavior, such as reformulating a weak search or trying multiple queries. However, it introduces variable cost and latency, less predictable behavior, and more complicated testing and debugging. It also still requires at least two LLM requests, so it does not inherently reduce calls.
-
-Tool calling would be worthwhile if evaluations show that iterative searches substantially improve difficult queries. For the current fixed workflow, explicit orchestration is simpler, more reliable, and easier to maintain.
+This design has less predictable latency than a fixed pipeline because difficult searches can use
+additional Open Library and model round trips. In exchange, it can recover from a plausible but wrong
+title or author by inspecting weak results and trying a materially different query. The hard limits,
+canonical server-side metadata, output validation, and read-only tool keep that flexibility controlled.

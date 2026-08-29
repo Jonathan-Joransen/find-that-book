@@ -37,6 +37,7 @@ export function BookCard({ book }: BookCardProps) {
         {book.firstPublishYear && (
           <p className="book-card__year">First published {book.firstPublishYear}</p>
         )}
+        <p className="book-card__score">Match score: {book.score}/100</p>
         <p className="book-card__explanation">
           <strong>Why it matched:</strong> {book.explanation}
         </p>

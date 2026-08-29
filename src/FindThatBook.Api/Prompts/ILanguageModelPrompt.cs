@@ -1,3 +1,5 @@
+using Microsoft.Extensions.AI;
+
 namespace FindThatBook.Api.Prompts;
 
 public interface ILanguageModelPrompt<TResponse>
@@ -9,6 +11,8 @@ public interface ILanguageModelPrompt<TResponse>
     string UserMessage { get; }
 
     LanguageModelSettings Settings { get; }
+
+    IList<AITool>? Tools { get; }
 
     TResponse Normalize(TResponse response) => response;
 

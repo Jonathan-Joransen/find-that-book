@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text;
 using FindThatBook.Api.Extensions;
-using FindThatBook.Api.Models.LanguageModels;
+using FindThatBook.Api.Models;
 using FindThatBook.Api.Providers;
 using FindThatBook.Api.Providers.OpenLibrary;
 using Microsoft.Extensions.Configuration;
@@ -39,7 +39,7 @@ public sealed class OpenLibraryBookProviderTests
         var provider = CreateProvider(handler, searchLimit: 5);
 
         var books = await provider.SearchAsync(
-            new BookSearchCompletion("  Moby Dick  ", null, null));
+            new BookSearchQuery("  Moby Dick  ", null, null));
 
         var book = Assert.Single(books);
         Assert.Equal("Moby Dick", book.Title);
@@ -76,7 +76,7 @@ public sealed class OpenLibraryBookProviderTests
             new StubHttpMessageHandler(HttpStatusCode.OK, json),
             logger: logger);
 
-        await provider.SearchAsync(new BookSearchCompletion("Moby Dick", null, null));
+        await provider.SearchAsync(new BookSearchQuery("Moby Dick", null, null));
 
         Assert.Collection(
             logger.Entries,
@@ -110,7 +110,7 @@ public sealed class OpenLibraryBookProviderTests
         var provider = CreateProvider(handler);
 
         var books = await provider.SearchAsync(
-            new BookSearchCompletion(null, null, ["anonymous"]));
+            new BookSearchQuery(null, null, ["anonymous"]));
 
         var book = Assert.Single(books);
         Assert.Equal("Unknown author", book.Author);
@@ -145,7 +145,7 @@ public sealed class OpenLibraryBookProviderTests
         var provider = CreateProvider(handler);
 
         var books = await provider.SearchAsync(
-            new BookSearchCompletion("The Hobbit", "J.R.R. Tolkien", null));
+            new BookSearchQuery("The Hobbit", "J.R.R. Tolkien", null));
 
         var book = Assert.Single(books);
         Assert.Equal("/works/OL262758W", book.BookKey);
@@ -167,7 +167,7 @@ public sealed class OpenLibraryBookProviderTests
         var provider = CreateProvider(handler);
 
         await provider.SearchAsync(
-            new BookSearchCompletion(title, author, ["doctor", "monster"]));
+            new BookSearchQuery(title, author, ["doctor", "monster"]));
 
         Assert.DoesNotContain("q=", handler.Request?.RequestUri?.Query);
     }
@@ -179,7 +179,7 @@ public sealed class OpenLibraryBookProviderTests
             new StubHttpMessageHandler(HttpStatusCode.ServiceUnavailable, "{}"));
 
         await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync(
-            new BookSearchCompletion("moby dick", null, null)));
+            new BookSearchQuery("moby dick", null, null)));
     }
 
     [Fact]
@@ -188,7 +188,7 @@ public sealed class OpenLibraryBookProviderTests
         var provider = CreateProvider(new StubHttpMessageHandler(HttpStatusCode.OK, "not-json"));
 
         await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync(
-            new BookSearchCompletion("moby dick", null, null)));
+            new BookSearchQuery("moby dick", null, null)));
     }
 
     [Fact]
@@ -210,7 +210,7 @@ public sealed class OpenLibraryBookProviderTests
         var provider = serviceProvider.GetRequiredService<IBookProvider>();
 
         var books = await provider.SearchAsync(
-            new BookSearchCompletion(null, null, ["recovered"]));
+            new BookSearchQuery(null, null, ["recovered"]));
 
         Assert.Equal(2, handler.RequestCount);
         Assert.Equal("Recovered book", Assert.Single(books).Title);
@@ -224,7 +224,7 @@ public sealed class OpenLibraryBookProviderTests
         var provider = serviceProvider.GetRequiredService<IBookProvider>();
 
         await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync(
-            new BookSearchCompletion(null, null, ["bad", "request"])));
+            new BookSearchQuery(null, null, ["bad", "request"])));
 
         Assert.Equal(1, handler.RequestCount);
     }
@@ -237,7 +237,7 @@ public sealed class OpenLibraryBookProviderTests
         var provider = serviceProvider.GetRequiredService<IBookProvider>();
 
         await Assert.ThrowsAsync<HttpRequestException>(() => provider.SearchAsync(
-            new BookSearchCompletion(null, null, ["unavailable"])));
+            new BookSearchQuery(null, null, ["unavailable"])));
 
         Assert.Equal(3, handler.RequestCount);
     }

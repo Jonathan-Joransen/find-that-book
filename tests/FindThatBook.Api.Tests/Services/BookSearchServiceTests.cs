@@ -1,9 +1,7 @@
 using FindThatBook.Api.Models;
 using FindThatBook.Api.Models.LanguageModels;
-using FindThatBook.Api.Prompts;
 using FindThatBook.Api.Providers;
 using FindThatBook.Api.Services;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -12,127 +10,81 @@ namespace FindThatBook.Api.Tests.Services;
 public sealed class BookSearchServiceTests
 {
     [Fact]
-    public async Task SearchAsync_UsesLanguageModelQuery()
+    public async Task SearchAsync_ReturnsAllBooksAboveCutoffInScoreOrder()
     {
-        var books = new RecordingBookProvider();
-        var languageModel = new StubLanguageModelProvider(
-            new BookSearchCompletion("Moby Dick", "Herman Melville", ["voyage", "whaling"]));
-        var service = CreateService(books, languageModel);
+        var finder = new StubBookFinder(
+            new RankedBook(42, "Only broad details overlap.", CreateBook("Weak match")),
+            new RankedBook(98, "  The title and author strongly match.  ", CreateBook("Best match")),
+            new RankedBook(60, "The evidence is at the cutoff.", CreateBook("Cutoff match")),
+            new RankedBook(61, "The setting and plot details plausibly match.", CreateBook("Good match")));
+        var service = CreateService(finder);
 
-        await service.SearchAsync("a whale and an obsessive captain");
-
-        Assert.Equal("Moby Dick", books.Search?.Title);
-        Assert.Equal("Herman Melville", books.Search?.Author);
-        Assert.Equal(["voyage", "whaling"], books.Search?.Keywords);
-        Assert.True(languageModel.WasCalled);
-        Assert.Equal(new PromptId("book-search", 5), languageModel.PromptId);
-    }
-
-    [Fact]
-    public async Task SearchAsync_DoesNotSearchBooksWhenLanguageModelFails()
-    {
-        var books = new RecordingBookProvider();
-        var service = CreateService(books, new ThrowingLanguageModelProvider());
-
-        await Assert.ThrowsAsync<LanguageModelException>(
-            () => service.SearchAsync("  original query  "));
-
-        Assert.Null(books.Search);
-    }
-
-    [Fact]
-    public async Task SearchAsync_RanksFiltersAndOrdersOpenLibraryCandidates()
-    {
-        var provider = new RecordingBookProvider(
-            CreateBook("Weak match"),
-            CreateBook("Best match"),
-            CreateBook("Borderline match"),
-            CreateBook("Good match"));
-        var rankedBooks = provider.Results
-            .Select((book, index) => new RankedBook(
-                new[] { 42, 98, 60, 61 }[index],
-                new[]
-                {
-                    "Only broad details overlap.",
-                    "  The title and author strongly match the request.  ",
-                    "The evidence is too weak.",
-                    "The setting and plot details plausibly match."
-                }[index],
-                book))
-            .ToList();
-        var languageModel = new StubLanguageModelProvider(
-            new BookSearchCompletion(null, null, ["captain", "whale"]),
-            new BookRankingCompletion(rankedBooks));
-        var service = CreateService(provider, languageModel);
-
-        var results = await service.SearchAsync("a whale and an obsessive captain");
+        var results = await service.SearchAsync("  a whale and an obsessive captain  ");
 
         Assert.Collection(
             results,
             book =>
             {
                 Assert.Equal("Best match", book.Title);
-                Assert.Equal(
-                    "The title and author strongly match the request.",
-                    book.Explanation);
+                Assert.Equal(98, book.Score);
+                Assert.Equal("The title and author strongly match.", book.Explanation);
             },
             book =>
             {
                 Assert.Equal("Good match", book.Title);
-                Assert.Equal(
-                    "The setting and plot details plausibly match.",
-                    book.Explanation);
+                Assert.Equal(61, book.Score);
             });
+        Assert.Equal("a whale and an obsessive captain", finder.Query);
+    }
+
+    [Fact]
+    public async Task SearchAsync_CapsResultsAtTwelveHighestScores()
+    {
+        var rankings = Enumerable.Range(1, 15)
+            .Select(index => new RankedBook(
+                70 + index,
+                $"Reason {index}.",
+                CreateBook($"Book {index}")))
+            .ToArray();
+        var service = CreateService(new StubBookFinder(rankings));
+
+        var results = await service.SearchAsync("many plausible books");
+
+        Assert.Equal(12, results.Count);
+        Assert.Equal("Book 15", results[0].Title);
+        Assert.Equal("Book 4", results[^1].Title);
         Assert.Equal(
-            [new PromptId("book-search", 5), new PromptId("book-ranking", 1)],
-            languageModel.PromptIds);
+            Enumerable.Range(74, 12).Reverse().Select(score => (int?)score),
+            results.Select(book => book.Score));
     }
 
     [Fact]
-    public async Task SearchAsync_DoesNotRankWhenOpenLibraryReturnsNoCandidates()
+    public async Task SearchAsync_ReturnsEveryQualifyingResultWhenThereAreFewerThanTwelve()
     {
-        var languageModel = new StubLanguageModelProvider(
-            new BookSearchCompletion(null, null, ["details", "unknown"]));
-        var service = CreateService(new RecordingBookProvider(), languageModel);
+        var rankings = Enumerable.Range(1, 5)
+            .Select(index => new RankedBook(
+                60 + index,
+                $"Reason {index}.",
+                CreateBook($"Book {index}")))
+            .ToArray();
+        var service = CreateService(new StubBookFinder(rankings));
 
-        var results = await service.SearchAsync("unknown book");
+        var results = await service.SearchAsync("five plausible books");
 
-        Assert.Empty(results);
-        Assert.Equal([new PromptId("book-search", 5)], languageModel.PromptIds);
+        Assert.Equal(5, results.Count);
     }
 
     [Fact]
-    public async Task SearchAsync_LogsEachSearchStepAtInformationLevel()
+    public async Task SearchAsync_PropagatesLanguageModelFailure()
     {
-        var provider = new RecordingBookProvider(CreateBook("Moby Dick"));
-        var languageModel = new StubLanguageModelProvider(
-            new BookSearchCompletion("Moby Dick", "Herman Melville", ["voyage", "whaling"]),
-            new BookRankingCompletion(
-            [
-                new RankedBook(95, "The title and author match.", provider.Results[0])
-            ]));
-        var logger = new RecordingLogger<BookSearchService>();
-        var service = CreateService(provider, languageModel, logger);
+        var service = CreateService(new ThrowingBookFinder());
 
-        await service.SearchAsync("a whale and an obsessive captain");
-
-        Assert.All(logger.Entries, entry => Assert.Equal(LogLevel.Information, entry.Level));
-        Assert.Contains(logger.Entries, entry => entry.Message.StartsWith("Step 1:"));
-        Assert.Contains(logger.Entries, entry => entry.Message.StartsWith("Step 1 complete."));
-        Assert.Contains(logger.Entries, entry => entry.Message.StartsWith("Step 2:"));
-        Assert.Contains(logger.Entries, entry => entry.Message.StartsWith("Step 2 complete."));
-        Assert.Contains(logger.Entries, entry => entry.Message.StartsWith("Step 3:"));
-        Assert.Contains(logger.Entries, entry => entry.Message.StartsWith("Step 3 complete."));
+        await Assert.ThrowsAsync<LanguageModelException>(
+            () => service.SearchAsync("original query"));
     }
 
-    private static BookSearchService CreateService(
-        IBookProvider books,
-        ILanguageModelProvider languageModel,
-        ILogger<BookSearchService>? logger = null) =>
-        new(
-            books,
-            languageModel,
-            logger ?? NullLogger<BookSearchService>.Instance);
+    private static BookSearchService CreateService(IBookFinder finder) =>
+        new(finder, NullLogger<BookSearchService>.Instance);
 
     private static Book CreateBook(string title) =>
         new(
@@ -140,53 +92,29 @@ public sealed class BookSearchServiceTests
             "An author",
             null,
             string.Empty,
-            null,
+            $"/works/{title.Replace(" ", string.Empty)}",
             null,
             null,
             null,
             "Open Library ranked this work as relevant to the query.");
 
-    private sealed class RecordingBookProvider(params Book[] results) : IBookProvider
+    private sealed class StubBookFinder(params RankedBook[] results) : IBookFinder
     {
-        public BookSearchCompletion? Search { get; private set; }
+        public string? Query { get; private set; }
 
-        public IReadOnlyList<Book> Results => results;
-
-        public Task<IReadOnlyList<Book>> SearchAsync(
-            BookSearchCompletion search,
+        public Task<IReadOnlyList<RankedBook>> FindAsync(
+            string query,
             CancellationToken cancellationToken = default)
         {
-            Search = search;
-            return Task.FromResult<IReadOnlyList<Book>>(results);
+            Query = query;
+            return Task.FromResult<IReadOnlyList<RankedBook>>(results);
         }
     }
 
-    private sealed class StubLanguageModelProvider(params object[] responses)
-        : ILanguageModelProvider
+    private sealed class ThrowingBookFinder : IBookFinder
     {
-        private int _responseIndex;
-
-        public bool WasCalled { get; private set; }
-
-        public PromptId? PromptId { get; private set; }
-
-        public List<PromptId> PromptIds { get; } = [];
-
-        public Task<TResponse> GenerateAsync<TResponse>(
-            ILanguageModelPrompt<TResponse> prompt,
-            CancellationToken cancellationToken = default)
-        {
-            WasCalled = true;
-            PromptId = prompt.Id;
-            PromptIds.Add(prompt.Id);
-            return Task.FromResult((TResponse)responses[_responseIndex++]);
-        }
-    }
-
-    private sealed class ThrowingLanguageModelProvider : ILanguageModelProvider
-    {
-        public Task<TResponse> GenerateAsync<TResponse>(
-            ILanguageModelPrompt<TResponse> prompt,
+        public Task<IReadOnlyList<RankedBook>> FindAsync(
+            string query,
             CancellationToken cancellationToken = default) =>
             throw new LanguageModelException(
                 "Language model unavailable.",

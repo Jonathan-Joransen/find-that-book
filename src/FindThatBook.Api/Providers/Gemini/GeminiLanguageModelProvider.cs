@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using FindThatBook.Api.Prompts;
+using FindThatBook.Api.Services;
 using Google.GenAI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
@@ -90,6 +91,18 @@ public sealed class GeminiLanguageModelProvider : ILanguageModelProvider, IDispo
                 "Gemini requires Gemini:ApiKey or the GEMINI_API_KEY environment variable.");
         }
 
-        return new Client(apiKey: apiKey).AsIChatClient(_options.Model);
+        var geminiClient = new Client(apiKey: apiKey).AsIChatClient(_options.Model);
+
+        return new FunctionInvokingChatClient(
+            geminiClient,
+            loggerFactory: null,
+            functionInvocationServices: null)
+        {
+            AllowConcurrentInvocation = false,
+            IncludeDetailedErrors = false,
+            MaximumConsecutiveErrorsPerRequest = 0,
+            MaximumIterationsPerRequest = BookSearchSession.MaximumSearches + 1,
+            TerminateOnUnknownCalls = true
+        };
     }
 }

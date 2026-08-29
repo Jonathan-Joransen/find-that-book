@@ -8,4 +8,5 @@ export type Book = {
   coverId: number | null
   coverImageUrl: string | null
   explanation: string
+  score: number
 }

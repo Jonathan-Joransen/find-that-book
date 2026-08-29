@@ -81,6 +81,8 @@
 
 .book-card__year { margin: 0; color: var(--ink); font-size: 12px; font-weight: 600; }
 
+.book-card__score { margin: 5px 0 0; color: var(--ink); font-size: 12px; font-weight: 600; }
+
 .book-card__identifier {
   margin: 5px 0 0;
   overflow-wrap: anywhere;

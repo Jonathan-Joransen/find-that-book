@@ -19,6 +19,8 @@ internal static class LanguageModelResponseGenerator
         {
             Temperature = prompt.Settings.Temperature,
             MaxOutputTokens = prompt.Settings.MaximumOutputTokens,
+            Tools = prompt.Tools,
+            AllowMultipleToolCalls = prompt.Tools is { Count: > 0 } ? false : null,
             Reasoning = prompt.Settings.ReasoningEffort is { } effort
                 ? new ReasoningOptions { Effort = effort }
                 : null

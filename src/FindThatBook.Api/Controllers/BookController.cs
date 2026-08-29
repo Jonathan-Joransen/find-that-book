@@ -44,7 +44,7 @@ public sealed class BookController : ControllerBase
         {
             return Problem(
                 title: "The language model provider is unavailable.",
-                detail: "The search query could not be interpreted. Try again later.",
+                detail: "The book search could not be completed. Try again later.",
                 statusCode: StatusCodes.Status502BadGateway);
         }
         catch (HttpRequestException)

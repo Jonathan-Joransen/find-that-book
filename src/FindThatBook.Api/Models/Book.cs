@@ -9,4 +9,5 @@ public sealed record Book(
     string? BookUrl,
     int? CoverId,
     string? CoverImageUrl,
-    string Explanation);
+    string Explanation,
+    int? Score = null);
