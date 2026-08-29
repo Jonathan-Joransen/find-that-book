@@ -80,9 +80,6 @@
 
 .search-panel__submit:hover:not(:disabled) { background: var(--orange-dark); transform: scale(1.04); }
 .search-panel__submit:disabled { opacity: 0.28; cursor: not-allowed; }
-.search-panel__spinner { animation: search-panel-spin 700ms linear infinite; }
-
-@keyframes search-panel-spin { to { transform: rotate(360deg); } }
 
 .search-panel__error { margin: 18px auto 0; color: #9b2819; font-size: 14px; }
 .search-panel--compact { padding-top: 34px; padding-bottom: 22px; }

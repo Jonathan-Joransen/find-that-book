@@ -17,7 +17,7 @@ export function HomePage() {
         onSearch={search.submitSearch}
       />
 
-      {search.hasSearched && (
+      {search.hasSearched && !search.isLoading && (
         <SearchResults
           key={search.resultQuery}
           books={search.books}

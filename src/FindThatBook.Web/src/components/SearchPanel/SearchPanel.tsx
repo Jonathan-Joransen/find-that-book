@@ -1,6 +1,7 @@
 import { type FormEvent, type KeyboardEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowUp, faCircleNotch } from '@fortawesome/free-solid-svg-icons'
+import { faArrowUp } from '@fortawesome/free-solid-svg-icons'
+import { SearchSpinner } from '../SearchSpinner/SearchSpinner'
 import type { SearchPanelProps } from './SearchPanel.models'
 import './SearchPanel.css'
 
@@ -185,14 +186,12 @@ export function SearchPanel({
             disabled={isLoading || !query.trim()}
             aria-label="Search for books"
           >
-            <FontAwesomeIcon
-              className={isLoading ? 'search-panel__spinner' : undefined}
-              icon={isLoading ? faCircleNotch : faArrowUp}
-              aria-hidden="true"
-            />
+            <FontAwesomeIcon icon={faArrowUp} aria-hidden="true" />
           </button>
         </div>
       </form>
+
+      {isLoading && <SearchSpinner />}
 
       {error && <p className="search-panel__error" role="alert">{error}</p>}
     </section>
