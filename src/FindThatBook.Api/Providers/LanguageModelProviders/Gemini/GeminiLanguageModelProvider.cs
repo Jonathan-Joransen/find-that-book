@@ -44,6 +44,7 @@ public sealed class GeminiLanguageModelProvider : ILanguageModelProvider, IDispo
                 prompt,
                 cancellationToken);
 
+            // Avoid the performance cost of serializing the response when information-level logging is disabled.
             if (_logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation(
