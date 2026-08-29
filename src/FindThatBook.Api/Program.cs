@@ -6,6 +6,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenLibrary(builder.Configuration);
 builder.Services.AddLanguageModels(builder.Configuration);
+builder.Services.AddOptions<BookSearchOptions>()
+    .Bind(builder.Configuration.GetSection(BookSearchOptions.SectionName))
+    .Validate(
+        options => options.CacheDurationMinutes is >= 1 and <= 1440,
+        "BookSearch:CacheDurationMinutes must be between 1 and 1440.")
+    .ValidateOnStart();
 builder.Services.AddScoped<IBookSearchService, BookSearchService>();
 
 builder.Services.AddCors(options =>

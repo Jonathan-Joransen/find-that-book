@@ -1,8 +1,12 @@
+using System.Security.Cryptography;
+using System.Text;
 using FindThatBook.Api.Models;
 using FindThatBook.Api.Models.Requests;
 using FindThatBook.Api.Providers.LanguageModelProviders;
 using FindThatBook.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Options;
 
 namespace FindThatBook.Api.Controllers;
 
@@ -11,10 +15,21 @@ namespace FindThatBook.Api.Controllers;
 public sealed class BookController : ControllerBase
 {
     private readonly IBookSearchService _bookSearchService;
+    private readonly HybridCache _cache;
+    private readonly HybridCacheEntryOptions _cacheEntryOptions;
 
-    public BookController(IBookSearchService bookSearchService)
+    public BookController(
+        IBookSearchService bookSearchService,
+        HybridCache cache,
+        IOptions<BookSearchOptions> options)
     {
         _bookSearchService = bookSearchService;
+        _cache = cache;
+        _cacheEntryOptions = new HybridCacheEntryOptions
+        {
+            Expiration = TimeSpan.FromMinutes(options.Value.CacheDurationMinutes),
+            LocalCacheExpiration = TimeSpan.FromMinutes(options.Value.CacheDurationMinutes)
+        };
     }
 
     [HttpPost("search")]
@@ -39,7 +54,11 @@ public sealed class BookController : ControllerBase
 
         try
         {
-            var books = await _bookSearchService.SearchAsync(query, cancellationToken);
+            var books = await _cache.GetOrCreateAsync(
+                CreateCacheKey(query),
+                async token => (await _bookSearchService.SearchAsync(query, token)).ToArray(),
+                _cacheEntryOptions,
+                cancellationToken: cancellationToken);
             return Ok(books);
         }
         catch (LanguageModelException)
@@ -56,5 +75,11 @@ public sealed class BookController : ControllerBase
                 detail: "Open Library could not complete the search. Try again later.",
                 statusCode: StatusCodes.Status502BadGateway);
         }
+    }
+
+    private static string CreateCacheKey(string query)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(query));
+        return $"book-search:v1:{Convert.ToHexString(hash)}";
     }
 }

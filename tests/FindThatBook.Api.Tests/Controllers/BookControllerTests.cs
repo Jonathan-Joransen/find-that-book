@@ -4,6 +4,9 @@ using FindThatBook.Api.Models.Requests;
 using FindThatBook.Api.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace FindThatBook.Api.Tests.Controllers;
@@ -24,7 +27,8 @@ public sealed class BookControllerTests
     public async Task Search_ReturnsSameBadRequestForQueryOutsideLengthRange(string? query)
     {
         var service = new RecordingBookSearchService();
-        var controller = new BookController(service);
+        await using var services = CreateController(service);
+        var controller = services.GetRequiredService<BookController>();
 
         var response = await controller.Search(
             new SearchBooksRequest(query),
@@ -47,7 +51,8 @@ public sealed class BookControllerTests
     public async Task Search_AcceptsBoundaryLengthAndPassesTrimmedQueryToService(int queryLength)
     {
         var service = new RecordingBookSearchService();
-        var controller = new BookController(service);
+        await using var services = CreateController(service);
+        var controller = services.GetRequiredService<BookController>();
         var query = new string('a', queryLength);
 
         var response = await controller.Search(
@@ -60,19 +65,77 @@ public sealed class BookControllerTests
         Assert.Equal(query, service.Query);
     }
 
-    private sealed class RecordingBookSearchService : IBookSearchService
+    [Fact]
+    public async Task Search_CachesRepeatedEquivalentRequests()
     {
-        public int CallCount { get; private set; }
+        var service = new RecordingBookSearchService();
+        await using var services = CreateController(service);
+        var controller = services.GetRequiredService<BookController>();
+
+        var first = await controller.Search(
+            new SearchBooksRequest("  a whale and an obsessive captain  "),
+            CancellationToken.None);
+        var second = await controller.Search(
+            new SearchBooksRequest("a whale and an obsessive captain"),
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(first.Result);
+        Assert.IsType<OkObjectResult>(second.Result);
+        Assert.Equal(1, service.CallCount);
+    }
+
+    [Fact]
+    public async Task Search_CoalescesConcurrentEquivalentRequests()
+    {
+        var service = new RecordingBookSearchService(delayMilliseconds: 50);
+        await using var services = CreateController(service);
+        var controller = services.GetRequiredService<BookController>();
+
+        var searches = Enumerable.Range(0, 5)
+            .Select(_ => controller.Search(
+                new SearchBooksRequest("a whale and an obsessive captain"),
+                CancellationToken.None))
+            .ToArray();
+
+        await Task.WhenAll(searches);
+
+        Assert.Equal(1, service.CallCount);
+    }
+
+    private static ServiceProvider CreateController(IBookSearchService service)
+    {
+        var services = new ServiceCollection();
+
+        services.AddLogging();
+        services.AddHybridCache();
+        services.AddSingleton(service);
+        services.AddSingleton(Options.Create(new BookSearchOptions()));
+        services.AddTransient<BookController>();
+
+        return services.BuildServiceProvider();
+    }
+
+    private sealed class RecordingBookSearchService(int delayMilliseconds = 0) : IBookSearchService
+    {
+        private int _callCount;
+
+        public int CallCount => _callCount;
 
         public string? Query { get; private set; }
 
-        public Task<IReadOnlyList<Book>> SearchAsync(
+        public async Task<IReadOnlyList<Book>> SearchAsync(
             string query,
             CancellationToken cancellationToken = default)
         {
-            CallCount++;
+            Interlocked.Increment(ref _callCount);
             Query = query;
-            return Task.FromResult<IReadOnlyList<Book>>([]);
+
+            if (delayMilliseconds > 0)
+            {
+                await Task.Delay(delayMilliseconds, cancellationToken);
+            }
+
+            return [];
         }
     }
 }
