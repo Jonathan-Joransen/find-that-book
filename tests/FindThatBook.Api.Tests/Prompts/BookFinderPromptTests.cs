@@ -118,17 +118,32 @@ public sealed class BookFinderPromptTests
     }
 
     [Fact]
-    public async Task Validate_RejectsUnknownOrDuplicateCandidateIds()
+    public async Task ValidateAndResolve_IgnoresUnknownCandidateIds()
+    {
+        var book = CreateBook("Moby Dick", "/works/OL1W");
+        var prompt = CreatePrompt(out var session, new RecordingBookProvider(book));
+        var result = await session.SearchOpenLibraryAsync(title: "Moby Dick");
+        var candidateId = Assert.Single(result.Books).CandidateId;
+        var completion = new BookFinderCompletion(
+        [
+            new BookCandidateRanking("book-999", 90, "Invented candidate."),
+            new BookCandidateRanking(candidateId, 80, "Strong match.")
+        ]);
+
+        prompt.Validate(completion);
+        var resolved = Assert.Single(session.Resolve(completion));
+
+        Assert.Equal(80, resolved.Score);
+        Assert.Same(book, resolved.Book);
+    }
+
+    [Fact]
+    public async Task Validate_RejectsDuplicateKnownCandidateIds()
     {
         var prompt = CreatePrompt(out var session, new RecordingBookProvider(CreateBook("Moby Dick", "/works/OL1W")));
         var result = await session.SearchOpenLibraryAsync(title: "Moby Dick");
         var candidateId = Assert.Single(result.Books).CandidateId;
 
-        Assert.Throws<InvalidDataException>(() => prompt.Validate(
-            new BookFinderCompletion(
-            [
-                new BookCandidateRanking("book-999", 90, "Unknown book."),
-            ])));
         Assert.Throws<InvalidDataException>(() => prompt.Validate(
             new BookFinderCompletion(
             [

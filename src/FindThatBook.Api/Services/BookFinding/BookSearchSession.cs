@@ -9,6 +9,12 @@ using Microsoft.Extensions.AI;
 
 namespace FindThatBook.Api.Services.BookFinding;
 
+/// <summary>
+/// Holds the server-owned state for one language-model book-finding request.
+/// It exposes Open Library search as a model tool while retaining the authoritative
+/// <see cref="Book"/> objects behind opaque candidate IDs, ensuring only books retrieved
+/// during that request can reach callers even if the model returns an invented ID.
+/// </summary>
 internal sealed class BookSearchSession
 {
     internal const int MaximumSearches = 3;
@@ -105,13 +111,27 @@ internal sealed class BookSearchSession
     public bool ContainsCandidate(string candidateId) =>
         _booksByCandidateId.ContainsKey(candidateId);
 
-    public IReadOnlyList<RankedBook> Resolve(BookFinderCompletion completion) =>
-        completion.RankedBooks
-            .Select(ranking => new RankedBook(
-                ranking.Score,
-                ranking.Reason,
-                _booksByCandidateId[ranking.CandidateId]))
-            .ToArray();
+    public IReadOnlyList<RankedBook> Resolve(BookFinderCompletion completion)
+    {
+        var resolvedBooks = new List<RankedBook>(completion.RankedBooks.Count);
+
+        foreach (var ranking in completion.RankedBooks)
+        {
+            if (string.IsNullOrEmpty(ranking.CandidateId) ||
+                !_booksByCandidateId.TryGetValue(ranking.CandidateId, out var book))
+            {
+                _logger.LogWarning(
+                    "Ignoring language-model ranking for unknown candidate {CandidateId}.",
+                    ranking.CandidateId);
+            }
+            else
+            {
+                resolvedBooks.Add(new RankedBook(ranking.Score, ranking.Reason, book));
+            }
+        }
+
+        return resolvedBooks;
+    }
 
     private BookSearchCandidate GetOrAddCandidate(Book book)
     {

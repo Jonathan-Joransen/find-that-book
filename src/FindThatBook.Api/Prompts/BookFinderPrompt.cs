@@ -91,15 +91,11 @@ public sealed class BookFinderPrompt : ILanguageModelPrompt<BookFinderCompletion
             throw new InvalidDataException("The language model returned no rankedBooks array.");
         }
 
-        if (response.RankedBooks.Any(ranking =>
-                string.IsNullOrWhiteSpace(ranking.CandidateId) ||
-                !_searchSession.ContainsCandidate(ranking.CandidateId)))
-        {
-            throw new InvalidDataException(
-                "The language model ranked a book that was not returned by Open Library.");
-        }
+        var knownRankings = response.RankedBooks
+            .Where(ranking => _searchSession.ContainsCandidate(ranking.CandidateId))
+            .ToArray();
 
-        if (response.RankedBooks
+        if (knownRankings
             .GroupBy(ranking => ranking.CandidateId, StringComparer.Ordinal)
             .Any(group => group.Count() > 1))
         {
@@ -107,13 +103,13 @@ public sealed class BookFinderPrompt : ILanguageModelPrompt<BookFinderCompletion
                 "The language model ranked the same Open Library candidate more than once.");
         }
 
-        if (response.RankedBooks.Any(ranking => ranking.Score is < 0 or > 100))
+        if (knownRankings.Any(ranking => ranking.Score is < 0 or > 100))
         {
             throw new InvalidDataException(
                 "The language model returned a search ranking score outside 0 through 100.");
         }
 
-        if (response.RankedBooks.Any(ranking =>
+        if (knownRankings.Any(ranking =>
                 string.IsNullOrWhiteSpace(ranking.Reason) || ranking.Reason.Length >= 200))
         {
             throw new InvalidDataException(
