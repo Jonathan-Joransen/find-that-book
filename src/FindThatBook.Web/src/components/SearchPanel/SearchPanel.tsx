@@ -52,8 +52,15 @@ export function SearchPanel({
   onSearch,
 }: SearchPanelProps) {
   const formRef = useRef<HTMLFormElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const previousFormTop = useRef<number | null>(null)
   const [placeholder, setPlaceholder] = useState('')
+
+  useEffect(() => {
+    const isDesktopPointer = window.matchMedia('(min-width: 741px) and (pointer: fine)').matches
+
+    if (isDesktopPointer) textareaRef.current?.focus()
+  }, [])
 
   useEffect(() => {
     if (query) return
@@ -167,6 +174,7 @@ export function SearchPanel({
           Describe the book you are looking for
         </label>
         <textarea
+          ref={textareaRef}
           id="book-query"
           value={query}
           onChange={(event) => {
@@ -177,7 +185,6 @@ export function SearchPanel({
           placeholder={placeholder}
           rows={3}
           maxLength={500}
-          autoFocus
         />
         <div className="search-panel__actions">
           <button

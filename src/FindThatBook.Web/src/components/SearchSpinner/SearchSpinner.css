@@ -84,5 +84,7 @@
 .search-panel--compact .search-spinner__art { width: 108px; height: 108px; }
 
 @media (max-width: 480px) {
-  .search-spinner__art { width: 116px; height: 116px; }
+  .search-spinner { min-height: 126px; margin-top: 12px; }
+  .search-spinner__art { width: 104px; height: 104px; }
+  .search-panel--compact .search-spinner { min-height: 112px; }
 }

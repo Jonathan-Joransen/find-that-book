@@ -11,3 +11,10 @@
   flex-direction: column;
   justify-content: center;
 }
+
+@media (max-width: 740px) {
+  .home-page:not(.home-page--with-results) .search-panel {
+    justify-content: flex-start;
+    padding-top: clamp(44px, 10vh, 80px);
+  }
+}

@@ -100,3 +100,44 @@
 @media (max-width: 740px) {
   .book-card__cover-title { font-size: clamp(20px, 6vw, 30px); }
 }
+
+@media (max-width: 600px) {
+  .book-card {
+    display: grid;
+    grid-template-columns: clamp(94px, 29vw, 124px) minmax(0, 1fr);
+    align-items: start;
+    gap: 14px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #ffffff;
+  }
+
+  .book-card__cover-link,
+  .book-card > .book-card__cover,
+  .book-card > .book-card__cover-image { grid-column: 1; }
+
+  .book-card__cover,
+  .book-card__cover-image { border-radius: 8px; }
+
+  .book-card__cover { padding: 12% 10%; }
+  .book-card__cover-kicker { font-size: 8px; }
+  .book-card__cover strong { font-size: 10px; }
+  .book-card__cover i { width: 22px; margin-bottom: 12px; }
+  .book-card__cover-title { font-size: clamp(16px, 5vw, 22px); }
+
+  .book-card__details {
+    min-width: 0;
+    padding: 1px 0 0;
+  }
+
+  .book-card__details h3 { font-size: 16px; line-height: 1.28; }
+  .book-card__byline { margin-bottom: 8px; font-size: 12px; }
+  .book-card__description { margin-bottom: 7px; -webkit-line-clamp: 2; }
+  .book-card__explanation { margin-top: 8px; }
+}
+
+@media (max-width: 360px) {
+  .book-card { grid-template-columns: 88px minmax(0, 1fr); gap: 12px; padding: 10px; }
+  .book-card__cover-title { font-size: 15px; }
+}
