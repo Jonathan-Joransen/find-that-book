@@ -49,7 +49,7 @@ public sealed class CachedOpenLibraryBookProvider(
 
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(source.ToString()));
 
-        return $"open-library:search:v1:{Convert.ToHexString(hash)}";
+        return $"open-library:search:v2:{Convert.ToHexString(hash)}";
     }
 
     private static void AppendCacheKeyPart(StringBuilder builder, string value) =>

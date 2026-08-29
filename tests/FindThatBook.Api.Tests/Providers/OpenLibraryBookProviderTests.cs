@@ -29,7 +29,7 @@ public sealed class OpenLibraryBookProviderTests
                   "title": "Moby Dick",
                   "author_name": ["Herman Melville"],
                   "first_publish_year": 1851,
-                  "first_sentence": ["Call me Ishmael."],
+                  "description": "A sea captain pursues the white whale that maimed him.",
                   "cover_i": 10521270
                 }
               ]
@@ -45,7 +45,9 @@ public sealed class OpenLibraryBookProviderTests
         Assert.Equal("Moby Dick", book.Title);
         Assert.Equal("Herman Melville", book.Author);
         Assert.Equal(1851, book.FirstPublishYear);
-        Assert.Equal("Call me Ishmael.", book.Description);
+        Assert.Equal(
+            "A sea captain pursues the white whale that maimed him.",
+            book.Description);
         Assert.Equal("/works/OL102749W", book.BookKey);
         Assert.Equal("https://openlibrary.org/works/OL102749W", book.BookUrl);
         Assert.Equal(10521270, book.CoverId);
@@ -55,7 +57,7 @@ public sealed class OpenLibraryBookProviderTests
         Assert.Empty(book.Explanation);
         Assert.Equal(HttpMethod.Get, handler.Request?.Method);
         Assert.Equal(
-            "?title=Moby%20Dick&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=5",
+            "?title=Moby%20Dick&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cdescription%2Ccover_i&limit=5",
             handler.Request?.RequestUri?.Query);
     }
 
@@ -66,7 +68,8 @@ public sealed class OpenLibraryBookProviderTests
             {
               "docs": [
                 {
-                  "title": "Anonymous work"
+                  "title": "Anonymous work",
+                  "first_sentence": ["This value must not be used as a description."]
                 }
               ]
             }
@@ -87,7 +90,7 @@ public sealed class OpenLibraryBookProviderTests
         Assert.Null(book.CoverImageUrl);
         Assert.Empty(book.Explanation);
         Assert.Equal(
-            "?q=anonymous&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=25",
+            "?q=anonymous&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cdescription%2Ccover_i&limit=25",
             handler.Request?.RequestUri?.Query);
     }
 
@@ -116,7 +119,7 @@ public sealed class OpenLibraryBookProviderTests
         Assert.Equal("/works/OL262758W", book.BookKey);
         Assert.Empty(book.Explanation);
         Assert.Equal(
-            "?title=The%20Hobbit&author=J.R.R.%20Tolkien&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=25",
+            "?title=The%20Hobbit&author=J.R.R.%20Tolkien&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cdescription%2Ccover_i&limit=25",
             handler.Request?.RequestUri?.Query);
     }
 

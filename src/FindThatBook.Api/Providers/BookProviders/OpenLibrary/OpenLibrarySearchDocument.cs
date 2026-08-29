@@ -20,8 +20,8 @@ internal sealed class OpenLibrarySearchDocument
     [JsonPropertyName("first_publish_year")]
     public int? FirstPublishYear { get; init; }
 
-    [JsonPropertyName("first_sentence")]
-    public List<string>? FirstSentences { get; init; }
+    [JsonPropertyName("description")]
+    public string? Description { get; init; }
 
     [JsonPropertyName("cover_i")]
     public int? CoverId { get; init; }
@@ -34,8 +34,6 @@ internal sealed class OpenLibrarySearchDocument
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        var firstSentence = FirstSentences?
-            .FirstOrDefault(sentence => !string.IsNullOrWhiteSpace(sentence));
         var bookKey = NormalizeOpenLibraryKey(Key);
         var bookUrl = bookKey is null
             ? null
@@ -48,7 +46,7 @@ internal sealed class OpenLibrarySearchDocument
             Title!.Trim(),
             authors is { Length: > 0 } ? string.Join(", ", authors) : UnknownAuthor,
             FirstPublishYear,
-            firstSentence?.Trim() ?? string.Empty,
+            Description?.Trim() ?? string.Empty,
             bookKey,
             bookUrl,
             CoverId,

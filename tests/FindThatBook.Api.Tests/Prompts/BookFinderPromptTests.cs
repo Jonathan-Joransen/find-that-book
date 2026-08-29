@@ -45,6 +45,9 @@ public sealed class BookFinderPromptTests
         var candidate = Assert.Single(result.Books);
         Assert.Equal("book-001", candidate.CandidateId);
         Assert.Equal("Moby Dick", candidate.Title);
+        Assert.Equal(
+            "A sea captain pursues the white whale that maimed him.",
+            candidate.Description);
     }
 
     [Fact]
@@ -170,7 +173,7 @@ public sealed class BookFinderPromptTests
             title,
             "Herman Melville",
             1851,
-            "Call me Ishmael.",
+            "A sea captain pursues the white whale that maimed him.",
             bookKey,
             null,
             null,

@@ -8,7 +8,7 @@ namespace FindThatBook.Api.Providers.BookProviders.OpenLibrary;
 
 public sealed class OpenLibraryBookProvider : IBookProvider
 {
-    private const string Fields = "key,title,author_name,first_publish_year,first_sentence,cover_i";
+    private const string Fields = "key,title,author_name,first_publish_year,description,cover_i";
 
     private readonly HttpClient _httpClient;
     private readonly ILogger<OpenLibraryBookProvider> _logger;
