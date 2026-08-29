@@ -2,8 +2,8 @@ using System.Net;
 using System.Text;
 using FindThatBook.Api.Extensions;
 using FindThatBook.Api.Models;
-using FindThatBook.Api.Providers;
-using FindThatBook.Api.Providers.OpenLibrary;
+using FindThatBook.Api.Providers.BookProviders;
+using FindThatBook.Api.Providers.BookProviders.OpenLibrary;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -55,7 +55,7 @@ public sealed class OpenLibraryBookProviderTests
         Assert.Equal("Strong title match.", book.Explanation);
         Assert.Equal(HttpMethod.Get, handler.Request?.Method);
         Assert.Equal(
-            "?title=Moby%20Dick&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=5",
+            "?title=Moby%20Dick&fields=key%2Ctitle%2Cauthor_name%2Cauthor_key%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=5",
             handler.Request?.RequestUri?.Query);
     }
 
@@ -122,7 +122,7 @@ public sealed class OpenLibraryBookProviderTests
         Assert.Null(book.CoverImageUrl);
         Assert.Equal("The title shares distinctive terms with the query.", book.Explanation);
         Assert.Equal(
-            "?q=anonymous&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=25",
+            "?q=anonymous&fields=key%2Ctitle%2Cauthor_name%2Cauthor_key%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=25",
             handler.Request?.RequestUri?.Query);
     }
 
@@ -149,10 +149,194 @@ public sealed class OpenLibraryBookProviderTests
 
         var book = Assert.Single(books);
         Assert.Equal("/works/OL262758W", book.BookKey);
-        Assert.Equal("Strong title and primary-author match.", book.Explanation);
+        Assert.Equal("Strong title match with supporting author metadata.", book.Explanation);
+        var author = Assert.Single(book.Authors);
+        Assert.Equal("J. R. R. Tolkien", author.Name);
+        Assert.False(author.IsPrimary);
+        Assert.Equal("searchResult", author.Evidence);
         Assert.Equal(
-            "?title=The%20Hobbit&author=J.R.R.%20Tolkien&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=25",
+            "?title=The%20Hobbit&author=J.R.R.%20Tolkien&fields=key%2Ctitle%2Cauthor_name%2Cauthor_key%2Cfirst_publish_year%2Cfirst_sentence%2Ccover_i&limit=25",
             handler.Request?.RequestUri?.Query);
+    }
+
+    [Fact]
+    public async Task SearchAsync_UsesCanonicalWorkAuthorsAndSeparatesContributors()
+    {
+        const string searchJson = """
+            {
+              "docs": [
+                {
+                  "key": "/works/OL27482W",
+                  "title": "The Hobbit",
+                  "author_name": ["J. R. R. Tolkien", "Alan Lee"],
+                  "author_key": ["OL26320A", "OL284568A"],
+                  "first_publish_year": 1937
+                }
+              ]
+            }
+            """;
+        const string workJson = """
+            {
+              "key": "/works/OL27482W",
+              "authors": [
+                {
+                  "author": { "key": "/authors/OL26320A" },
+                  "type": { "key": "/type/author_role" }
+                },
+                {
+                  "author": { "key": "/authors/OL284568A" },
+                  "role": "Illustrator",
+                  "type": { "key": "/type/author_role" }
+                }
+              ],
+              "description": {
+                "type": "/type/text",
+                "value": "Bilbo Baggins joins a company of dwarves on a quest."
+              }
+            }
+            """;
+        var handler = new SequenceHttpMessageHandler(
+            (HttpStatusCode.OK, searchJson),
+            (HttpStatusCode.OK, workJson));
+        var provider = CreateProvider(handler, workEnrichmentLimit: 1);
+
+        var books = await provider.SearchAsync(
+            new BookSearchQuery("The Hobbit", "J.R.R. Tolkien", null));
+
+        var book = Assert.Single(books);
+        Assert.Equal("J. R. R. Tolkien", book.Author);
+        Assert.Equal(
+            "Bilbo Baggins joins a company of dwarves on a quest.",
+            book.Description);
+        Assert.Equal("Strong title and canonical work-author match.", book.Explanation);
+        Assert.Collection(
+            book.Authors,
+            author =>
+            {
+                Assert.Equal("/authors/OL26320A", author.AuthorKey);
+                Assert.Equal("J. R. R. Tolkien", author.Name);
+                Assert.True(author.IsPrimary);
+                Assert.Null(author.Role);
+                Assert.Equal("canonicalWork", author.Evidence);
+            },
+            contributor =>
+            {
+                Assert.Equal("/authors/OL284568A", contributor.AuthorKey);
+                Assert.Equal("Alan Lee", contributor.Name);
+                Assert.False(contributor.IsPrimary);
+                Assert.Equal("Illustrator", contributor.Role);
+                Assert.Equal("canonicalWork", contributor.Evidence);
+            });
+        Assert.Equal(2, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task SearchAsync_ResolvesCanonicalAuthorNameWhenSearchMetadataDoesNotContainIt()
+    {
+        const string searchJson = """
+            {
+              "docs": [
+                {
+                  "key": "/works/OL27482W",
+                  "title": "The Hobbit",
+                  "author_name": ["Alan Lee"],
+                  "author_key": ["OL284568A"]
+                }
+              ]
+            }
+            """;
+        const string workJson = """
+            {
+              "authors": [
+                { "author": { "key": "/authors/OL26320A" } },
+                { "author": { "key": "/authors/OL284568A" }, "role": "Illustrator" }
+              ]
+            }
+            """;
+        const string authorJson = """
+            { "key": "/authors/OL26320A", "name": "J. R. R. Tolkien" }
+            """;
+        var handler = new SequenceHttpMessageHandler(
+            (HttpStatusCode.OK, searchJson),
+            (HttpStatusCode.OK, workJson),
+            (HttpStatusCode.OK, authorJson));
+        var provider = CreateProvider(handler, workEnrichmentLimit: 1);
+
+        var book = Assert.Single(await provider.SearchAsync(
+            new BookSearchQuery("The Hobbit", null, null)));
+
+        Assert.Equal("J. R. R. Tolkien", book.Author);
+        Assert.Equal("J. R. R. Tolkien", book.Authors[0].Name);
+        Assert.True(book.Authors[0].IsPrimary);
+        Assert.Equal("Alan Lee", book.Authors[1].Name);
+        Assert.False(book.Authors[1].IsPrimary);
+        Assert.Equal(3, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task SearchAsync_FallsBackToUnverifiedSearchAuthorsWhenWorkEnrichmentFails()
+    {
+        const string searchJson = """
+            {
+              "docs": [
+                {
+                  "key": "/works/OL27482W",
+                  "title": "The Hobbit",
+                  "author_name": ["J. R. R. Tolkien", "Alan Lee"],
+                  "author_key": ["OL26320A", "OL284568A"]
+                }
+              ]
+            }
+            """;
+        var handler = new SequenceHttpMessageHandler(
+            (HttpStatusCode.OK, searchJson),
+            (HttpStatusCode.ServiceUnavailable, "{}"));
+        var provider = CreateProvider(handler, workEnrichmentLimit: 1);
+
+        var book = Assert.Single(await provider.SearchAsync(
+            new BookSearchQuery("The Hobbit", null, null)));
+
+        Assert.Equal("J. R. R. Tolkien, Alan Lee", book.Author);
+        Assert.All(book.Authors, author =>
+        {
+            Assert.False(author.IsPrimary);
+            Assert.Equal("searchResult", author.Evidence);
+        });
+        Assert.Equal(2, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task SearchAsync_CachesCanonicalWorkWithinProviderSession()
+    {
+        const string searchJson = """
+            {
+              "docs": [
+                {
+                  "key": "/works/OL27482W",
+                  "title": "The Hobbit",
+                  "author_name": ["J. R. R. Tolkien"],
+                  "author_key": ["OL26320A"]
+                }
+              ]
+            }
+            """;
+        const string workJson = """
+            {
+              "authors": [
+                { "author": { "key": "/authors/OL26320A" } }
+              ]
+            }
+            """;
+        var handler = new SequenceHttpMessageHandler(
+            (HttpStatusCode.OK, searchJson),
+            (HttpStatusCode.OK, workJson),
+            (HttpStatusCode.OK, searchJson));
+        var provider = CreateProvider(handler, workEnrichmentLimit: 1);
+
+        await provider.SearchAsync(new BookSearchQuery("The Hobbit", null, null));
+        await provider.SearchAsync(new BookSearchQuery("The Hobbit", null, null));
+
+        Assert.Equal(3, handler.RequestCount);
     }
 
     [Theory]
@@ -245,6 +429,7 @@ public sealed class OpenLibraryBookProviderTests
     private static OpenLibraryBookProvider CreateProvider(
         HttpMessageHandler handler,
         int searchLimit = 25,
+        int workEnrichmentLimit = 0,
         ILogger<OpenLibraryBookProvider>? logger = null)
     {
         var client = new HttpClient(handler)
@@ -253,7 +438,8 @@ public sealed class OpenLibraryBookProviderTests
         };
         var options = Options.Create(new OpenLibraryOptions
         {
-            SearchLimit = searchLimit
+            SearchLimit = searchLimit,
+            WorkEnrichmentLimit = workEnrichmentLimit
         });
 
         return new OpenLibraryBookProvider(
@@ -268,6 +454,7 @@ public sealed class OpenLibraryBookProviderTests
         {
             [$"{OpenLibraryOptions.SectionName}:BaseUrl"] = "https://openlibrary.org/",
             [$"{OpenLibraryOptions.SectionName}:SearchLimit"] = "25",
+            [$"{OpenLibraryOptions.SectionName}:WorkEnrichmentLimit"] = "0",
             [$"{OpenLibraryOptions.SectionName}:RetryCount"] = "2",
             [$"{OpenLibraryOptions.SectionName}:RetryDelayMilliseconds"] = "0",
             [$"{OpenLibraryOptions.SectionName}:UserAgent"] = "FindThatBook.Tests/1.0"

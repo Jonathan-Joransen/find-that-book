@@ -1,6 +1,6 @@
 using System.Net.Http.Headers;
-using FindThatBook.Api.Providers;
-using FindThatBook.Api.Providers.OpenLibrary;
+using FindThatBook.Api.Providers.BookProviders;
+using FindThatBook.Api.Providers.BookProviders.OpenLibrary;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using Polly;
@@ -29,6 +29,9 @@ public static class OpenLibraryServiceCollectionExtensions
             .Validate(
                 options => options.SearchLimit is >= 1 and <= 100,
                 "OpenLibrary:SearchLimit must be between 1 and 100.")
+            .Validate(
+                options => options.WorkEnrichmentLimit is >= 0 and <= 12,
+                "OpenLibrary:WorkEnrichmentLimit must be between 0 and 12.")
             .Validate(
                 options => options.RetryCount is >= 0 and <= 5,
                 "OpenLibrary:RetryCount must be between 0 and 5.")

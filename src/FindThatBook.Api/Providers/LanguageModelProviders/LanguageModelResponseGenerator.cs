@@ -1,7 +1,7 @@
 using FindThatBook.Api.Prompts;
 using Microsoft.Extensions.AI;
 
-namespace FindThatBook.Api.Providers;
+namespace FindThatBook.Api.Providers.LanguageModelProviders;
 
 internal static class LanguageModelResponseGenerator
 {

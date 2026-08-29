@@ -1,7 +1,7 @@
 using FindThatBook.Api.Models;
 using FindThatBook.Api.Models.LanguageModels;
 using FindThatBook.Api.Prompts;
-using FindThatBook.Api.Providers;
+using FindThatBook.Api.Providers.BookProviders;
 using FindThatBook.Api.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -23,6 +23,7 @@ public sealed class BookFinderPromptTests
         Assert.Contains(
             "return only one representative from each group",
             prompt.SystemMessage);
+        Assert.Contains("canonicalWork evidence", prompt.SystemMessage);
         Assert.Equal(
             "search_open_library",
             Assert.IsAssignableFrom<AIFunction>(Assert.Single(prompt.Tools!)).Name);
@@ -45,6 +46,10 @@ public sealed class BookFinderPromptTests
         var candidate = Assert.Single(result.Books);
         Assert.Equal("book-001", candidate.CandidateId);
         Assert.Equal("Moby Dick", candidate.Title);
+        var author = Assert.Single(candidate.Authors);
+        Assert.Equal("Herman Melville", author.Name);
+        Assert.True(author.IsPrimary);
+        Assert.Equal("canonicalWork", author.Evidence);
     }
 
     [Fact]
@@ -175,7 +180,18 @@ public sealed class BookFinderPromptTests
             null,
             null,
             null,
-            "Open Library ranked this work as relevant to the query.");
+            "Open Library ranked this work as relevant to the query.")
+        {
+            Authors =
+            [
+                new BookAuthor(
+                    "/authors/OL29497A",
+                    "Herman Melville",
+                    null,
+                    true,
+                    "canonicalWork")
+            ]
+        };
 
     private sealed class RecordingBookProvider(params Book[] results) : IBookProvider
     {

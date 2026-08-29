@@ -9,4 +9,13 @@ export type Book = {
   coverImageUrl: string | null
   explanation: string
   score: number
+  authors: BookAuthor[]
+}
+
+export type BookAuthor = {
+  authorKey: string | null
+  name: string
+  role: string | null
+  isPrimary: boolean
+  evidence: 'canonicalWork' | 'searchResult'
 }
