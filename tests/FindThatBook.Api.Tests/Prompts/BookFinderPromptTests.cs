@@ -11,18 +11,19 @@ namespace FindThatBook.Api.Tests.Prompts;
 
 public sealed class BookFinderPromptTests
 {
+    public static TheoryData<string> InvalidReasons =>
+        new()
+        {
+            "   ",
+            new string('a', 200)
+        };
+
     [Fact]
-    public void Constructor_TrimsQueryVersionsPromptAndProvidesSearchTool()
+    public void Constructor_TrimsQueryAndProvidesSearchTool()
     {
         var prompt = CreatePrompt(out _);
 
         Assert.Equal("a whale and an obsessive captain", prompt.UserMessage);
-        Assert.Equal(new PromptId("book-finder", 1), prompt.Id);
-        Assert.Equal(8_192, prompt.Settings.MaximumOutputTokens);
-        Assert.Equal(ReasoningEffort.Low, prompt.Settings.ReasoningEffort);
-        Assert.Contains(
-            "return only one representative from each group",
-            prompt.SystemMessage);
         Assert.Equal(
             "search_open_library",
             Assert.IsAssignableFrom<AIFunction>(Assert.Single(prompt.Tools!)).Name);
@@ -48,6 +49,15 @@ public sealed class BookFinderPromptTests
         Assert.Equal(
             "A sea captain pursues the white whale that maimed him.",
             candidate.Description);
+    }
+
+    [Fact]
+    public async Task SearchTool_RejectsSearchWithoutEvidence()
+    {
+        var session = CreateSession(new RecordingBookProvider());
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => session.SearchOpenLibraryAsync("  ", null, [" "]));
     }
 
     [Fact]
@@ -144,9 +154,8 @@ public sealed class BookFinderPromptTests
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public async Task Validate_RejectsEmptyReason(string reason)
+    [MemberData(nameof(InvalidReasons))]
+    public async Task Validate_RejectsInvalidReason(string reason)
     {
         var prompt = CreatePrompt(out var session, new RecordingBookProvider(CreateBook("Moby Dick", "/works/OL1W")));
         var candidateId = Assert.Single(

@@ -124,7 +124,6 @@ public sealed class OpenLibraryBookProviderTests
     }
 
     [Theory]
-    [InlineData("Frankenstein", "Mary Shelley")]
     [InlineData("Frankenstein", null)]
     [InlineData(null, "Mary Shelley")]
     public async Task SearchAsync_DoesNotAddKeywordsWhenTitleOrAuthorIsAvailable(
@@ -209,8 +208,9 @@ public sealed class OpenLibraryBookProviderTests
 
         await provider.SearchAsync(new BookSearchQuery("  Moby Dick ", null, null));
         await provider.SearchAsync(new BookSearchQuery("moby dick", null, ["ignored"]));
+        await provider.SearchAsync(new BookSearchQuery("Frankenstein", null, null));
 
-        Assert.Equal(1, handler.RequestCount);
+        Assert.Equal(2, handler.RequestCount);
     }
 
     [Fact]

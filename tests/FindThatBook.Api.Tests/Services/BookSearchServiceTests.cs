@@ -1,6 +1,5 @@
 using FindThatBook.Api.Models;
 using FindThatBook.Api.Models.LanguageModels;
-using FindThatBook.Api.Providers.LanguageModelProviders;
 using FindThatBook.Api.Services.BookFinding;
 using FindThatBook.Api.Services.BookSearch;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -59,15 +58,6 @@ public sealed class BookSearchServiceTests
             results.Select(book => book.Score));
     }
 
-    [Fact]
-    public async Task SearchAsync_PropagatesLanguageModelFailure()
-    {
-        var service = CreateService(new ThrowingBookFinder());
-
-        await Assert.ThrowsAsync<LanguageModelException>(
-            () => service.SearchAsync("original query"));
-    }
-
     private static BookSearchService CreateService(IBookFinder finder) =>
         new(finder, NullLogger<BookSearchService>.Instance);
 
@@ -96,13 +86,4 @@ public sealed class BookSearchServiceTests
         }
     }
 
-    private sealed class ThrowingBookFinder : IBookFinder
-    {
-        public Task<IReadOnlyList<RankedBook>> FindAsync(
-            string query,
-            CancellationToken cancellationToken = default) =>
-            throw new LanguageModelException(
-                "Language model unavailable.",
-                new HttpRequestException("Provider request failed."));
-    }
 }

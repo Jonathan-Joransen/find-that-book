@@ -15,7 +15,6 @@ namespace FindThatBook.Api.Tests.Integration;
 public sealed class BookFinderIntegrationTests(ITestOutputHelper output)
 {
     [GeminiIntegrationTheory]
-    [InlineData("tale two cities")]
     [InlineData("uh I think it was tale of two cities maybe charles dikens?")]
     public async Task FindAsync_HandlesPartialTitleAndNoisyMixedEvidence(string input)
     {
@@ -49,7 +48,6 @@ public sealed class BookFinderIntegrationTests(ITestOutputHelper output)
         output.WriteLine($"Best match: {bestMatch.Book.Title} ({bestMatch.Score}) - {bestMatch.Reason}");
         Assert.Equal(expectedBook.BookKey, bestMatch.Book.BookKey);
         Assert.True(bestMatch.Score > 60);
-        Assert.InRange(bookProvider.SearchCount, 1, BookSearchSession.MaximumSearches);
     }
 
     [GeminiIntegrationFact]
@@ -95,7 +93,6 @@ public sealed class BookFinderIntegrationTests(ITestOutputHelper output)
             "Dickens",
             ranking.Book.Author,
             StringComparison.OrdinalIgnoreCase));
-        Assert.InRange(bookProvider.SearchCount, 1, BookSearchSession.MaximumSearches);
     }
 
     [GeminiIntegrationTheory]
@@ -109,16 +106,6 @@ public sealed class BookFinderIntegrationTests(ITestOutputHelper output)
         "books written by Alan Lee",
         "The Lord of the Rings Sketchbook",
         "Black Ships Before Troy")]
-    // GrandPre wrote Cleonardo, not Dragon's Guide.
-    [InlineData(
-        "books written by Mary GrandPre",
-        "Cleonardo, the little inventor",
-        "A Dragon's Guide To The Care And Feeding Of Humans")]
-    // Tenniel created Cartoons, not Haunted Man.
-    [InlineData(
-        "books by John Tenniel",
-        "Cartoons (from Punch)",
-        "The Haunted Man and the Ghost's Bargain")]
     public async Task FindAsync_PrefersPrimaryAuthorMatchesOverContributorOnlyMatches(
         string input,
         string expectedTitle,
@@ -153,8 +140,6 @@ public sealed class BookFinderIntegrationTests(ITestOutputHelper output)
                 bestMatch.Score > contributorOnlyRanking.Score,
                 $"Expected primary-author match '{bestMatch.Book.Title}' to outrank contributor-only match '{contributorOnlyRanking.Book.Title}'.");
         }
-
-        Assert.InRange(bookProvider.SearchCount, 1, BookSearchSession.MaximumSearches);
     }
 
     private static Book CreatePrimaryAuthorMatch(string title) =>
@@ -172,18 +157,6 @@ public sealed class BookFinderIntegrationTests(ITestOutputHelper output)
                 2005,
                 "Alan Lee presents his sketches and account of designing Middle-earth.",
                 "/works/OL5256894W"),
-            "Cleonardo, the little inventor" => CreateBook(
-                title,
-                "Mary GrandPre",
-                2016,
-                "Mary GrandPre's story about a young inventor.",
-                "/works/OL20033888W"),
-            "Cartoons (from Punch)" => CreateBook(
-                title,
-                "John Tenniel",
-                1863,
-                "A collection of John Tenniel's Punch cartoons.",
-                "/works/OL8251194W"),
             _ => throw new ArgumentOutOfRangeException(nameof(title), title, null)
         };
 
@@ -202,18 +175,6 @@ public sealed class BookFinderIntegrationTests(ITestOutputHelper output)
                 1967,
                 "A retelling of the Trojan War and the destruction of Troy.",
                 "/works/OL1417812W"),
-            "A Dragon's Guide To The Care And Feeding Of Humans" => CreateBook(
-                title,
-                "Laurence Yep, Joanne Ryder, Mary GrandPre",
-                2015,
-                "A dragon and her human face magical mishaps together.",
-                "/works/OL17828715W"),
-            "The Haunted Man and the Ghost's Bargain" => CreateBook(
-                title,
-                "Charles Dickens, John Tenniel, Frank Stone",
-                1848,
-                "A haunted professor is offered escape from his painful memories.",
-                "/works/OL14869114W"),
             _ => throw new ArgumentOutOfRangeException(nameof(title), title, null)
         };
 

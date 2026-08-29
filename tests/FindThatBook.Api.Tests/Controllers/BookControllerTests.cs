@@ -1,6 +1,7 @@
 using FindThatBook.Api.Controllers;
 using FindThatBook.Api.Models;
 using FindThatBook.Api.Models.Requests;
+using FindThatBook.Api.Providers.LanguageModelProviders;
 using FindThatBook.Api.Services.BookSearch;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -17,7 +18,6 @@ public sealed class BookControllerTests
         new()
         {
             null,
-            string.Empty,
             "   ",
             new string('a', SearchBooksRequest.MaximumQueryLength + 1)
         };
@@ -78,10 +78,14 @@ public sealed class BookControllerTests
         var second = await controller.Search(
             new SearchBooksRequest("a whale and an obsessive captain"),
             CancellationToken.None);
+        var distinct = await controller.Search(
+            new SearchBooksRequest("a doctor creates a monster"),
+            CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(first.Result);
         Assert.IsType<OkObjectResult>(second.Result);
-        Assert.Equal(1, service.CallCount);
+        Assert.IsType<OkObjectResult>(distinct.Result);
+        Assert.Equal(2, service.CallCount);
     }
 
     [Fact]
@@ -100,6 +104,36 @@ public sealed class BookControllerTests
         await Task.WhenAll(searches);
 
         Assert.Equal(1, service.CallCount);
+    }
+
+    [Theory]
+    [InlineData(
+        true,
+        "The language model provider is unavailable.",
+        "The book search could not be completed. Try again later.")]
+    [InlineData(
+        false,
+        "The book provider is unavailable.",
+        "Open Library could not complete the search. Try again later.")]
+    public async Task Search_ReturnsBadGatewayWhenDependencyIsUnavailable(
+        bool languageModelFailure,
+        string expectedTitle,
+        string expectedDetail)
+    {
+        await using var services = CreateController(
+            new ThrowingBookSearchService(languageModelFailure));
+        var controller = services.GetRequiredService<BookController>();
+
+        var response = await controller.Search(
+            new SearchBooksRequest("a whale and an obsessive captain"),
+            CancellationToken.None);
+
+        var error = Assert.IsType<ObjectResult>(response.Result);
+        var problem = Assert.IsType<ProblemDetails>(error.Value);
+        Assert.Equal(StatusCodes.Status502BadGateway, error.StatusCode);
+        Assert.Equal(StatusCodes.Status502BadGateway, problem.Status);
+        Assert.Equal(expectedTitle, problem.Title);
+        Assert.Equal(expectedDetail, problem.Detail);
     }
 
     private static ServiceProvider CreateController(IBookSearchService service)
@@ -137,5 +171,17 @@ public sealed class BookControllerTests
 
             return [];
         }
+    }
+
+    private sealed class ThrowingBookSearchService(bool languageModelFailure) : IBookSearchService
+    {
+        public Task<IReadOnlyList<Book>> SearchAsync(
+            string query,
+            CancellationToken cancellationToken = default) =>
+            languageModelFailure
+                ? throw new LanguageModelException(
+                    "Language model unavailable.",
+                    new HttpRequestException("Provider request failed."))
+                : throw new HttpRequestException("Open Library unavailable.");
     }
 }

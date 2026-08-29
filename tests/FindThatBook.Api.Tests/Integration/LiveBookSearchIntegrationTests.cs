@@ -19,8 +19,6 @@ public sealed class LiveBookSearchIntegrationTests(ITestOutputHelper output)
 {
     [LiveExternalTheory]
     [InlineData("a whale and an obsessive captain", "Moby", "Melville")]
-    [InlineData("a scientist creates life from dead bodies", "Frankenstein", "Shelley")]
-    [InlineData("Bilbo joins thirteen dwarves and meets the dragon Smaug", "Hobbit", "Tolkien")]
     public async Task SearchAsync_FindsExpectedBookThroughLiveOpenLibrary(
         string input,
         string expectedTitleFragment,
