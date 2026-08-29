@@ -142,6 +142,125 @@ public sealed class BookFinderIntegrationTests(ITestOutputHelper output)
         Assert.InRange(bookProvider.SearchCount, 1, BookSearchSession.MaximumSearches);
     }
 
+    [GeminiIntegrationTheory]
+    // Shepard wrote the memoir, not Pooh.
+    [InlineData(
+        "books by E. H. Shepard",
+        "Drawn from Memory",
+        "The Tao of Pooh")]
+    // Lee wrote the sketchbook, not Troy.
+    [InlineData(
+        "books written by Alan Lee",
+        "The Lord of the Rings Sketchbook",
+        "Black Ships Before Troy")]
+    // GrandPre wrote Cleonardo, not Dragon's Guide.
+    [InlineData(
+        "books written by Mary GrandPre",
+        "Cleonardo, the little inventor",
+        "A Dragon's Guide To The Care And Feeding Of Humans")]
+    // Tenniel created Cartoons, not Haunted Man.
+    [InlineData(
+        "books by John Tenniel",
+        "Cartoons (from Punch)",
+        "The Haunted Man and the Ghost's Bargain")]
+    public async Task FindAsync_PrefersPrimaryAuthorMatchesOverContributorOnlyMatches(
+        string input,
+        string expectedTitle,
+        string excludedTitle)
+    {
+        var primaryAuthorMatch = CreatePrimaryAuthorMatch(expectedTitle);
+        var contributorOnlyMatch = CreateContributorOnlyMatch(excludedTitle);
+        var bookProvider = new StubBookProvider(contributorOnlyMatch, primaryAuthorMatch);
+        using var languageModel = CreateLanguageModel();
+        var finder = CreateFinder(bookProvider, languageModel);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+
+        var rankings = await finder.FindAsync(input, timeout.Token);
+
+        output.WriteLine($"Input: {input}");
+        foreach (var ranking in rankings)
+        {
+            output.WriteLine(
+                $"Match: {ranking.Book.Title} by {ranking.Book.Author} ({ranking.Score}) - {ranking.Reason}");
+        }
+
+        var bestMatch = Assert.IsType<RankedBook>(rankings.FirstOrDefault());
+        Assert.Equal(primaryAuthorMatch.BookKey, bestMatch.Book.BookKey);
+
+        var contributorOnlyRanking = rankings.FirstOrDefault(ranking => string.Equals(
+            ranking.Book.Title,
+            excludedTitle,
+            StringComparison.OrdinalIgnoreCase));
+        if (contributorOnlyRanking is not null)
+        {
+            Assert.True(
+                bestMatch.Score > contributorOnlyRanking.Score,
+                $"Expected primary-author match '{bestMatch.Book.Title}' to outrank contributor-only match '{contributorOnlyRanking.Book.Title}'.");
+        }
+
+        Assert.InRange(bookProvider.SearchCount, 1, BookSearchSession.MaximumSearches);
+    }
+
+    private static Book CreatePrimaryAuthorMatch(string title) =>
+        title switch
+        {
+            "Drawn from Memory" => CreateBook(
+                title,
+                "Ernest H. Shepard",
+                1957,
+                "Ernest H. Shepard's autobiographical memoir.",
+                "/works/OL3017266W"),
+            "The Lord of the Rings Sketchbook" => CreateBook(
+                title,
+                "Alan Lee",
+                2005,
+                "Alan Lee presents his sketches and account of designing Middle-earth.",
+                "/works/OL5256894W"),
+            "Cleonardo, the little inventor" => CreateBook(
+                title,
+                "Mary GrandPre",
+                2016,
+                "Mary GrandPre's story about a young inventor.",
+                "/works/OL20033888W"),
+            "Cartoons (from Punch)" => CreateBook(
+                title,
+                "John Tenniel",
+                1863,
+                "A collection of John Tenniel's Punch cartoons.",
+                "/works/OL8251194W"),
+            _ => throw new ArgumentOutOfRangeException(nameof(title), title, null)
+        };
+
+    private static Book CreateContributorOnlyMatch(string title) =>
+        title switch
+        {
+            "The Tao of Pooh" => CreateBook(
+                title,
+                "Benjamin Hoff, Ernest H. Shepard, A. A. Milne",
+                1982,
+                "Benjamin Hoff explains Taoist philosophy through Winnie-the-Pooh.",
+                "/works/OL3913006W"),
+            "Black Ships Before Troy" => CreateBook(
+                title,
+                "Rosemary Sutcliff, Alan Lee, Manuel Otero",
+                1967,
+                "A retelling of the Trojan War and the destruction of Troy.",
+                "/works/OL1417812W"),
+            "A Dragon's Guide To The Care And Feeding Of Humans" => CreateBook(
+                title,
+                "Laurence Yep, Joanne Ryder, Mary GrandPre",
+                2015,
+                "A dragon and her human face magical mishaps together.",
+                "/works/OL17828715W"),
+            "The Haunted Man and the Ghost's Bargain" => CreateBook(
+                title,
+                "Charles Dickens, John Tenniel, Frank Stone",
+                1848,
+                "A haunted professor is offered escape from his painful memories.",
+                "/works/OL14869114W"),
+            _ => throw new ArgumentOutOfRangeException(nameof(title), title, null)
+        };
+
     private static Book CreateBook(
         string title,
         string author,
