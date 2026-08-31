@@ -84,29 +84,33 @@ the same request shape from Open Library.
 
 ## Design decisions
 
-- Gemini handles the genuinely ambiguous work: interpreting messy text, choosing search terms,
-  comparing candidates, and writing grounded explanations. Input validation, Open Library access,
-  caching, result filtering, and response shaping remain deterministic server responsibilities.
-- Tool use is intentionally bounded to three Open Library searches per request, with up to six
-  distinctive keywords and 25 candidates per search. This allows query refinement while placing a
-  predictable ceiling on external calls and model context.
-- Open Library records stay server-owned and are exposed to Gemini through opaque, request-scoped
-  candidate IDs. The API ignores unknown IDs and validates scores, explanations, duplicates, result
-  order, and result count so the model cannot introduce books that were never retrieved.
-- Candidates with the same Open Library work key are de-duplicated deterministically within a
-  request. Cross-record editions and duplicate works are grouped by Gemini because Open Library
-  does not provide a consistently reliable canonical relationship in every search result.
-- Only candidates scoring above 60 are returned, ordered by score, with a maximum of 12 results.
-  This favors a short useful set while still preserving ambiguity when several matches are
-  credible.
-- Two caches serve different purposes: complete searches are cached for 60 minutes by exact user
-  query, while normalized Open Library requests are cached for six hours. This reduces latency,
-  Gemini usage, and repeated catalog traffic at the cost of accepting short-lived stale results.
-- Transient Open Library failures are retried twice with exponential backoff and jitter. Failed
-  Gemini or Open Library requests become `502` responses; there is no lower-quality deterministic
-  search fallback in the current scope.
+- The biggest desgin desicsion is having the AI handle the Open Library request via a tool call
+  - I am a big proponent of taking as many decisions away from AI workflows as possible to increase 
+    determinism, but this use case flourishes with non-determinism. 
+  - The call to Open Library might need to be made several times depending on what keywords the AI determines
+    and on what results come back from the API. This is a perfect situation to use a tool call and allow the AI 
+    to flourish in it's strengths of making sense of messy inputs.
+  - Since this is a tool call we are keeping as much as we can deterministic.
+    - It can only call that endpoint
+    - It has retry logic and cached values
+    - It is limited to 3 calls to prevent AI from going down a rabbit hole.
+
+- There are other minor decisions. The first point is the biggest design decision by a large margin.
+  here are some quick others.
+  - Adapter pattern on providers so we can swap them out (new LLMs or new Book API can be dropped in)
+  - Caching requests to our API and requests to open library to decrease repeated call lookups
+  - 
 
 ## Testing Strategy  
+
+Primarly want to test the results. 
+- Are certain messy inputs getting the expected data.
+- Are certain inputs not returning likely false positives
+
+I wanted to use the tests to verify the LLM + Open Library was giving us high quality usable results.
+
+There are some other unit tests, but I did not spend much time on those. 
+I was mainly interested in the tests that proved our results would be high quality.
 
 ## Features completed
 
@@ -123,5 +127,14 @@ the same request shape from Open Library.
 - Mobile responsive
 
 ## Improvements
-- Improving the Author rankings instead of going of the assumption
-- 
+- Improving the determinism in Author relevance rankings 
+- Add frontend tests
+- Add e2e tests
+- Add a deterministic fallback where we break queries into keywords and search open library when the LLM is down.
+- Pull the grouping logic out of the AI to make it deterministic.
+- shorten provder timeouts, specifically book providers should be lower.
+- Add rate limiting
+- Increase test coverange on backend
+- Hardening against prompt injections from user or from book provider
+  - Our exposure is limited by structured outputs and read only data, but moving external messages into a clear tagged section
+    and maybe even scanning for LLM directions could help reduce potential attacks.
