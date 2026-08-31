@@ -99,7 +99,6 @@ the same request shape from Open Library.
   here are some quick others.
   - Adapter pattern on providers so we can swap them out (new LLMs or new Book API can be dropped in)
   - Caching requests to our API and requests to open library to decrease repeated call lookups
-  - 
 
 ## Testing Strategy  
 
